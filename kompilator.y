@@ -5,6 +5,7 @@
     #include <map>
     #include <stack>
     #include <string>
+    #include "utils.hpp"
 
     extern int yylineno;
     extern FILE* yyin;
@@ -14,7 +15,6 @@
     std::string takeFirstAvailableRegister();
     std::string takeFirstAvailableRegisterNotA();
     void freeRegister(std::string rx);
-    std::string freeRegisterA();
     void printCmd(std::string cmd);
     int countLines(std::string s);
 
@@ -107,47 +107,68 @@ commands:
 
 command:
     identifier COLON EQUAL expression SEMICOLON {
+        std::string r4 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        freeRegister(r4);
+        std::string r1 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        freeRegister(r1);
+
         $$ = $1 + $4;
-        $$ += "GET " + lastUsedRegister.top() + "\n";
-        freeRegister(lastUsedRegister.top());
-        lastUsedRegister.pop();
-        $$ += "STORE " + lastUsedRegister.top() + "\n";
-        freeRegister(lastUsedRegister.top());
-        lastUsedRegister.pop();
-        generatedLines += countLines($$);
+        $$ += "GET " + r4 + "\n";
+        $$ += "STORE " + r1 + "\n";
+        generatedLines += 2;
     }
     | IF condition THEN commands ELSE commands ENDIF {
-        int lenCondition = countLines($2);
-        int lenTrue = countLines($4);
-        int lenFalse = countLines($6);
-        $$ = "#POCZĄTEK " + std::to_string(generatedLines - lenTrue - lenFalse) + $2;
-        int elseBlock = generatedLines - countLines($6) + 1 + 1;
-        $$ += "JPOS " + std::to_string(elseBlock) + "\n";
-        $$ += "#TRUE " + $4;
-        int endif = generatedLines + 3;
-        $$ += "JUMP " + std::to_string(endif) + "\n";
-        $$ += "#FALSE " + $6 + "#KONIEC\n";
+        std::string r2 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        freeRegister(r2);
+
+        generatedLines += 2;
+        int len6 = countLines($6);
+        int addr6 = generatedLines - len6;
+
+        $$ = $2;
+        $$ += "JPOS " + std::to_string(addr6) + "\n";
+        $$ += $4;
+        $$ += "JUMP " + std::to_string(generatedLines) + "\n";
+        $$ += $6;
     }
-    | IF condition THEN commands ENDIF
+    | IF condition THEN commands ENDIF {
+        std::string r2 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        freeRegister(r2);
+
+        generatedLines += 1;
+
+        $$ = $2;
+        $$ += "JPOS " + std::to_string(generatedLines) + "\n";
+        $$ += $4;
+    }
     | WHILE condition DO commands ENDWHILE
     | REPEAT commands UNTIL condition SEMICOLON
     | proc_call SEMICOLON
     | READ identifier SEMICOLON {
+        std::string r = lastUsedRegister.top();
+
         $$ = $2;
         $$ += "READ\n";
-        $$ += "STORE " + lastUsedRegister.top() + "\n";
-        freeRegister(lastUsedRegister.top());
+        $$ += "STORE " + r + "\n";
+        generatedLines += 2;
+
+        freeRegister(r);
         lastUsedRegister.pop();
-        generatedLines += countLines($$);
-        // std::errc << generatedLines << std::endl;
     }
     | WRITE value SEMICOLON {
+        std::string r = lastUsedRegister.top();
+
         $$ = $2;
-        $$ += "GET " + lastUsedRegister.top() + "\n";
+        $$ += "GET " + r + "\n";
         $$ += "WRITE\n";
-        freeRegister(lastUsedRegister.top());
+        generatedLines += 2;
+
+        freeRegister(r);
         lastUsedRegister.pop();
-        generatedLines += countLines($$);
     }
 ;
 
@@ -194,15 +215,27 @@ expression:
     value
     | value PLUS value {
         std::string r3 = lastUsedRegister.top();
-        freeRegister(r3);
         lastUsedRegister.pop();
-        $$ = $1 + $3 + "GET " + lastUsedRegister.top() + "\n" + "ADD " + r3 + "\n" + "PUT " + lastUsedRegister.top() + "\n";
+        freeRegister(r3);
+        std::string r1 = lastUsedRegister.top();
+
+        $$ = $1 + $3;
+        $$ += "GET " + r1 + "\n";
+        $$ += "ADD " + r3 + "\n";
+        $$ += "PUT " + r1 + "\n";
+        generatedLines += 3;
     }
     | value MINUS value {
         std::string r3 = lastUsedRegister.top();
-        freeRegister(r3);
         lastUsedRegister.pop();
-        $$ = $1 + $3 + "GET " + lastUsedRegister.top() + "\n" + "SUB " + r3 + "\n" + "PUT " + lastUsedRegister.top() + "\n";
+        freeRegister(r3);
+        std::string r1 = lastUsedRegister.top();
+
+        $$ = $1 + $3;
+        $$ += "GET " + r1 + "\n";
+        $$ += "SUB " + r3 + "\n";
+        $$ += "PUT " + r1 + "\n";
+        generatedLines += 3;
     }
     | value ASTERISK value
     | value SLASH value
@@ -210,7 +243,20 @@ expression:
 ;
 
 condition:
-    value EQUAL value
+    value EQUAL value {
+        std::string r3 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        freeRegister(r3);
+        std::string r1 = lastUsedRegister.top();
+
+        $$ = $1 + $3;
+        $$ += "GET " + r1 + "\n";
+        $$ += "SUB " + r3 + "\n";
+        $$ += "ADD " + r3 + "\n";
+        $$ += "SUB " + r1 + "\n";
+        $$ += "PUT " + r1 + "\n";
+        generatedLines += 5;
+    }
     | value NEGATION EQUAL value
     | value MORE value
     | value LESS value
@@ -221,27 +267,24 @@ condition:
 value:
     num {
         int x = stoi($1);
+        std::string n = intToBinary(x);
         std::string r = takeFirstAvailableRegisterNotA();
 
         $$ = "RST " + r + "\n";
         generatedLines++;
-        while(x > 0)
+        for(int i = 0; i < n.size(); i++)
         {
-            if(x % 2 == 1)
+            if(i > 0)
             {
                 $$ += "SHL " + r + "\n";
+                generatedLines++;
+            }
+            if(n[i] == '1')
+            {
                 $$ += "INC " + r + "\n";
-                generatedLines += 2;
+                generatedLines++;
             }
-            else
-            {
-                $$ += "SHL " + r + "\n";
-                generatedLines += 1;
-            }
-            x /= 2;
         }
-        // for(int i = 0; i < x; i++)
-        //     $$ += "INC " + r + "\n";
 
         lastUsedRegister.push(r);
     }
@@ -249,6 +292,7 @@ value:
         $$ = $1;
         $$ += "LOAD " + lastUsedRegister.top() + "\n";
         $$ += "PUT " + lastUsedRegister.top() + "\n";
+        generatedLines += 2;
     }
 ;
 
@@ -256,21 +300,52 @@ identifier:
     pidentifier { 
         std::string r = takeFirstAvailableRegisterNotA();  
         std::string varName = varPrefix + $1;
+        // TODO: Sprawdź czy zmienna istnieje
         int varAddress = variableMap[varName];
+        std::string n = intToBinary(varAddress);
+
         $$ = "RST " + r + "\n";
-        for(int i = 0; i < varAddress; i++)
-            $$ += "INC " + r + "\n";   
+        generatedLines++;
+        for(int i = 0; i < n.size(); i++)
+        {
+            if(i > 0)
+            {
+                $$ += "SHL " + r + "\n";
+                generatedLines++;
+            }
+            if(n[i] == '1')
+            {
+                $$ += "INC " + r + "\n";
+                generatedLines++;
+            }
+        }  
+
         lastUsedRegister.push(r);
         }
     | pidentifier LSPAR num RSPAR { 
-        std::string r1 = takeFirstAvailableRegisterNotA();
+        std::string r = takeFirstAvailableRegisterNotA();
         std::string varName = varPrefix + $1;
         int varAddress = variableMap[varName];
         int offset = stoi($3);
-        $$ = "RST " + r1 + "\n";
-        for(int i = 0; i < varAddress + offset; i++)
-            $$ += "INC " + r1 + "\n";
-        lastUsedRegister.push(r1);
+        std::string n = intToBinary(varAddress + offset);
+
+        $$ = "RST " + r + "\n";
+        generatedLines++;
+        for(int i = 0; i < n.size(); i++)
+        {
+            if(i > 0)
+            {
+                $$ += "SHL " + r + "\n";
+                generatedLines++;
+            }
+            if(n[i] == '1')
+            {
+                $$ += "INC " + r + "\n";
+                generatedLines++;
+            }
+        } 
+
+        lastUsedRegister.push(r);
         }
     | pidentifier LSPAR pidentifier RSPAR 
 ;
@@ -325,16 +400,6 @@ void freeRegister(std::string rx)
     availableRegister[x - 'a'] = true;
 }
 
-// Zwalnia rejestr a zwracając rejestr do którego została przeniesiona jego zawartość
-std::string freeRegisterA()
-{
-    if(availableRegister[0])
-        return "a";
-    std::string rs = takeFirstAvailableRegisterNotA();
-    printCmd("PUT " + rs);
-    freeRegister("a");
-    return rs;
-}
 int countLines(std::string s)
 {
     return std::count(s.begin(), s.end(), '\n');
