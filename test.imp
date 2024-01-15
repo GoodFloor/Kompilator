@@ -2,10 +2,9 @@ PROGRAM IS
     p, q
 IN
     p := 1;
-    q := 2;
-    IF p = q THEN
-        p := 16;
-    ELSE
-        q := 16;
-    ENDIF
+    q := 1;
+    REPEAT 
+        p := p + 1;
+        WRITE p;
+    UNTIL p = 16;
 END

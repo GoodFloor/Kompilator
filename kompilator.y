@@ -120,10 +120,6 @@ command:
         generatedLines += 2;
     }
     | IF condition THEN commands ELSE commands ENDIF {
-        std::string r2 = lastUsedRegister.top();
-        lastUsedRegister.pop();
-        freeRegister(r2);
-
         generatedLines += 2;
         int len6 = countLines($6);
         int addr6 = generatedLines - len6;
@@ -135,18 +131,28 @@ command:
         $$ += $6;
     }
     | IF condition THEN commands ENDIF {
-        std::string r2 = lastUsedRegister.top();
-        lastUsedRegister.pop();
-        freeRegister(r2);
-
         generatedLines += 1;
 
         $$ = $2;
         $$ += "JPOS " + std::to_string(generatedLines) + "\n";
         $$ += $4;
     }
-    | WHILE condition DO commands ENDWHILE
-    | REPEAT commands UNTIL condition SEMICOLON
+    | WHILE condition DO commands ENDWHILE {
+        int loopBegin = generatedLines - countLines($2) - countLines($4);
+        generatedLines += 2;
+
+        $$ = $2;
+        $$ += "JPOS " + std::to_string(generatedLines) + "\n";
+        $$ += $4;
+        $$ += "JUMP " + std::to_string(loopBegin) + "\n";
+    }
+    | REPEAT commands UNTIL condition SEMICOLON {
+        int loopBegin = generatedLines - countLines($2) - countLines($4);
+
+        $$ = $2 + $4;
+        $$ += "JPOS " + std::to_string(loopBegin) + "\n";
+        generatedLines += 1;
+    }
     | proc_call SEMICOLON
     | READ identifier SEMICOLON {
         std::string r = lastUsedRegister.top();
@@ -246,18 +252,47 @@ condition:
     value EQUAL value {
         std::string r3 = lastUsedRegister.top();
         lastUsedRegister.pop();
-        freeRegister(r3);
         std::string r1 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string rt = takeFirstAvailableRegisterNotA();
+        freeRegister(r3);
+        freeRegister(rt);
+        freeRegister(r1);
 
         $$ = $1 + $3;
         $$ += "GET " + r1 + "\n";
         $$ += "SUB " + r3 + "\n";
-        $$ += "ADD " + r3 + "\n";
+        $$ += "PUT " + rt + "\n";
+        $$ += "GET " + r3 + "\n";
         $$ += "SUB " + r1 + "\n";
-        $$ += "PUT " + r1 + "\n";
-        generatedLines += 5;
+        $$ += "ADD " + rt + "\n";
+        generatedLines += 6;
     }
-    | value NEGATION EQUAL value
+    | value NEGATION EQUAL value {
+        std::string r3 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string r1 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string rt = takeFirstAvailableRegisterNotA();
+        freeRegister(r3);
+        freeRegister(rt);
+        freeRegister(r1);
+
+        $$ = $1 + $4;
+        $$ += "GET " + r1 + "\n";
+        $$ += "SUB " + r3 + "\n";
+        $$ += "PUT " + rt + "\n";
+        $$ += "GET " + r3 + "\n";
+        $$ += "SUB " + r1 + "\n";
+        $$ += "ADD " + rt + "\n";
+        generatedLines += 6;
+
+        $$ += "JPOS " + std::to_string(generatedLines + 3) + "\n";
+        $$ += "INC a\n";
+        $$ += "JUMP " + std::to_string(generatedLines + 4) + "\n";
+        $$ += "RST a\n"; 
+        generatedLines += 4;
+    }
     | value MORE value
     | value LESS value
     | value MORE EQUAL value
