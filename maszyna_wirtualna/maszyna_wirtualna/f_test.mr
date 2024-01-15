@@ -1,0 +1,19 @@
+RST a
+RST b
+RST c
+RST d
+RST e
+RST f
+RST g
+RST h
+RST b
+RST c
+SHL c
+SHL c
+SHL c
+SHL c
+SHL c
+INC c
+GET c
+STORE b
+HALT

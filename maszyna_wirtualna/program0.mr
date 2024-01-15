@@ -1,0 +1,37 @@
+# prosta translacja z użyciem pamięci
+# n -> P0, p -> P1
+READ    # READ n
+RST b
+STORE b
+RST b   # p := n / 2
+LOAD b
+SHR a
+SHL a   # p := 2 * p
+RST b
+INC b
+STORE b
+RST b   # IF n > p THEN
+LOAD b
+PUT c
+RST b
+INC b
+LOAD b
+PUT d
+GET c
+SUB d
+JZERO 24 # JUMP ELSE
+RST a   # THEN
+INC a
+WRITE
+JUMP 26 # JUMP ENDIF
+RST a   # ELSE 
+WRITE
+RST b   # n := n / 2
+LOAD b
+SHR a
+RST b
+STORE b
+RST b   # UNTIL n = 0
+LOAD b
+JPOS 3
+HALT

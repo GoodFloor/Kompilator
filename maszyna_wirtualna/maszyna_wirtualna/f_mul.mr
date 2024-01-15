@@ -1,0 +1,40 @@
+RST a 
+RST b
+RST c
+RST d
+READ
+JZERO 38
+PUT b
+READ 
+JZERO 38
+PUT c
+SUB b
+JZERO 19
+GET c   # Upewnij się że c < b
+PUT d 
+GET b
+PUT c
+GET d 
+PUT b
+RST d
+GET c   #19 - początek
+DEC a
+JZERO 36    
+GET c
+SHR c
+SHL c
+SUB c
+JPOS 30     
+SHR c
+SHL b
+JUMP 19
+SHR c   #30 - else
+GET b
+ADD d 
+PUT d
+SHL b
+JUMP 19
+GET b   #36 - koniec
+ADD d 
+WRITE   #38 - wypisz
+HALT
