@@ -48,9 +48,9 @@ SHL c
 SHL c
 GET b
 SUB c
-PUT d
-GET c
-SUB b
-ADD d
+JPOS 53
+INC a
+JUMP 54
+RST a
 JPOS 23
 HALT

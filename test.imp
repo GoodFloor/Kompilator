@@ -1,10 +1,10 @@
 PROGRAM IS
     p, q
 IN
-    p := 1;
+    p := 16;
     q := 1;
     REPEAT 
         p := p + 1;
         WRITE p;
-    UNTIL p = 16;
+    UNTIL p > 16;
 END

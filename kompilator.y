@@ -93,7 +93,9 @@ main:
     PROGRAM IS declarations IN commands END {
         printCmd($5);
     }
-    | PROGRAM IS IN commands END
+    | PROGRAM IS IN commands END {
+        printCmd($4);
+    }
 ;
 
 commands:
@@ -269,20 +271,20 @@ condition:
         generatedLines += 6;
     }
     | value NEGATION EQUAL value {
-        std::string r3 = lastUsedRegister.top();
+        std::string r4 = lastUsedRegister.top();
         lastUsedRegister.pop();
         std::string r1 = lastUsedRegister.top();
         lastUsedRegister.pop();
         std::string rt = takeFirstAvailableRegisterNotA();
-        freeRegister(r3);
+        freeRegister(r4);
         freeRegister(rt);
         freeRegister(r1);
 
         $$ = $1 + $4;
         $$ += "GET " + r1 + "\n";
-        $$ += "SUB " + r3 + "\n";
+        $$ += "SUB " + r4 + "\n";
         $$ += "PUT " + rt + "\n";
-        $$ += "GET " + r3 + "\n";
+        $$ += "GET " + r4 + "\n";
         $$ += "SUB " + r1 + "\n";
         $$ += "ADD " + rt + "\n";
         generatedLines += 6;
@@ -293,10 +295,75 @@ condition:
         $$ += "RST a\n"; 
         generatedLines += 4;
     }
-    | value MORE value
-    | value LESS value
-    | value MORE EQUAL value
-    | value LESS EQUAL value
+    | value MORE value {
+        std::string r3 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string r1 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        
+        $$ = $1 + $3;
+        $$ += "GET " + r1 + "\n";
+        $$ += "SUB " + r3 + "\n";
+        generatedLines += 2;
+
+        $$ += "JPOS " + std::to_string(generatedLines + 3) + "\n";
+        $$ += "INC a\n";
+        $$ += "JUMP " + std::to_string(generatedLines + 4) + "\n";
+        $$ += "RST a\n"; 
+        generatedLines += 4;
+
+        freeRegister(r1);
+        freeRegister(r3);
+    }
+    | value LESS value {
+        std::string r3 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string r1 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        
+        $$ = $1 + $3;
+        $$ += "#LESS\n";
+        $$ += "GET " + r3 + "\n";
+        $$ += "SUB " + r1 + "\n";
+        generatedLines += 2;
+
+        $$ += "JPOS " + std::to_string(generatedLines + 3) + "\n";
+        $$ += "INC a\n";
+        $$ += "JUMP " + std::to_string(generatedLines + 4) + "\n";
+        $$ += "RST a\n"; 
+        generatedLines += 4;
+
+        freeRegister(r1);
+        freeRegister(r3);
+    }
+    | value MORE EQUAL value {
+        std::string r4 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string r1 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        
+        $$ = $1 + $4;
+        $$ += "GET " + r4 + "\n";
+        $$ += "SUB " + r1 + "\n";
+        generatedLines += 2;
+
+        freeRegister(r1);
+        freeRegister(r4);
+    }
+    | value LESS EQUAL value {
+        std::string r4 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string r1 = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        
+        $$ = $1 + $4;
+        $$ += "GET " + r1 + "\n";
+        $$ += "SUB " + r4 + "\n";
+        generatedLines += 2;
+
+        freeRegister(r1);
+        freeRegister(r4);
+    }
 ;
 
 value:
