@@ -1,10 +1,9 @@
 PROGRAM IS
-    p, q
+    b
 IN
-    p := 16;
-    q := 1;
-    REPEAT 
-        p := p + 1;
-        WRITE p;
-    UNTIL p > 16;
+    b := 1;
+    WHILE b <= 1024 DO
+        b := b * 2;
+        WRITE b;
+    ENDWHILE
 END

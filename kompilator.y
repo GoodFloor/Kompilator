@@ -1,10 +1,11 @@
 %{
     #include <stdio.h>
-    #include <algorithm>
+    #include <fstream>
     #include <iostream>
     #include <map>
     #include <stack>
     #include <string>
+    #include <vector>
     #include "utils.hpp"
 
     extern int yylineno;
@@ -12,20 +13,25 @@
 
     int yylex(void);
     int yyerror(char const*);
-    std::string takeFirstAvailableRegister();
     std::string takeFirstAvailableRegisterNotA();
     void freeRegister(std::string rx);
     void printCmd(std::string cmd);
-    int countLines(std::string s);
+    int getAddress(std::string var);
 
 
+    std::fstream outputFile;
     int generatedLines = 0;
     int currentProcedureId = 0;
     int currentVarAddress = 0;
     std::string varPrefix = "proc" + std::to_string(currentProcedureId) + "_";
     std::map<std::string, int> variableMap;
+    std::map<std::string, std::string> procedureAlias;
+    std::map<std::string, int> procedureAddress;
+    std::map<std::string, std::string> argsAlias;
     bool availableRegister[8];
     std::stack<std::string> lastUsedRegister;
+    int argId = 0;
+    std::vector<std::string> argsVector;
 %}
 
 %define api.value.type {std::string}
@@ -74,27 +80,93 @@
 
 %%
 program_all:
-    procedures main
+    procedures main {
+        printCmd("JUMP " + std::to_string(generatedLines - countLines($2) + 1) + "\n");
+        printCmd($1);
+        printCmd($2);
+    }
 ;
 
 procedures:
     procedures PROCEDURE proc_head IS declarations IN commands END { 
+        variableMap[varPrefix + "@return"] = currentVarAddress;
+        currentVarAddress++;
+
+        std::string r = takeFirstAvailableRegisterNotA();  
+        std::string varName = varPrefix + "@return";
+        int varAddress = getAddress(varName);
+        std::string n = intToBinary(varAddress);
+
+        $$ = "#PROCEDURE " + varPrefix + "\n" + $7;
+
+        $$ += "RST " + r + "\n";
+        generatedLines++;
+        for(int i = 0; i < n.size(); i++)
+        {
+            if(i > 0)
+            {
+                $$ += "SHL " + r + "\n";
+                generatedLines++;
+            }
+            if(n[i] == '1')
+            {
+                $$ += "INC " + r + "\n";
+                generatedLines++;
+            }
+        } 
+        $$ += "JUMPR " + r + "\n";
+        generatedLines++;
+
         currentProcedureId++;
         varPrefix = "proc" + std::to_string(currentProcedureId) + "_"; 
         }
     | procedures PROCEDURE proc_head IS IN commands END { 
+        variableMap[varPrefix + "@return"] = currentVarAddress;
+        currentVarAddress++;
+
+        std::string r = takeFirstAvailableRegisterNotA();  
+        std::string varName = varPrefix + "@return";
+        int varAddress = getAddress(varName);
+        std::string n = intToBinary(varAddress);
+
+        $$ = "#PROCEDURE " + varPrefix + "\n" + $6;
+
+        $$ += "RST " + r + "\n";
+        generatedLines++;
+        for(int i = 0; i < n.size(); i++)
+        {
+            if(i > 0)
+            {
+                $$ += "SHL " + r + "\n";
+                generatedLines++;
+            }
+            if(n[i] == '1')
+            {
+                $$ += "INC " + r + "\n";
+                generatedLines++;
+            }
+        } 
+        $$ += "JUMPR " + r + "\n";
+        generatedLines++;
+
         currentProcedureId++;
         varPrefix = "proc" + std::to_string(currentProcedureId) + "_"; 
         }
-    | 
+    | {
+        generatedLines++;
+    }
 ;
 
 main:
     PROGRAM IS declarations IN commands END {
-        printCmd($5);
+        $$ = "#MAIN\n" + $5;
+        $$ += "HALT\n";
+        generatedLines++;
     }
     | PROGRAM IS IN commands END {
-        printCmd($4);
+        $$ = "#MAIN\n" + $4;
+        $$ += "HALT\n";
+        generatedLines++;
     }
 ;
 
@@ -140,7 +212,7 @@ command:
         $$ += $4;
     }
     | WHILE condition DO commands ENDWHILE {
-        int loopBegin = generatedLines - countLines($2) - countLines($4);
+        int loopBegin = generatedLines - countLines($2) - countLines($4) + 1;
         generatedLines += 2;
 
         $$ = $2;
@@ -155,7 +227,9 @@ command:
         $$ += "JPOS " + std::to_string(loopBegin) + "\n";
         generatedLines += 1;
     }
-    | proc_call SEMICOLON
+    | proc_call SEMICOLON {
+        $$ = $1;
+    }
     | READ identifier SEMICOLON {
         std::string r = lastUsedRegister.top();
 
@@ -181,11 +255,54 @@ command:
 ;
 
 proc_head:
-    pidentifier LPAR args_decl RPAR
+    pidentifier LPAR args_decl RPAR {
+        procedureAlias[$1] = varPrefix;
+        argId = 0;
+    }
 ;
 
 proc_call:
-    pidentifier LPAR args RPAR
+    pidentifier LPAR args RPAR {
+        std::string procId = procedureAlias[$1];
+        int procAddr = procedureAddress[procId];
+        int returnAddr = getAddress(procId + "@return");
+        std::string r1 = takeFirstAvailableRegisterNotA();  
+        std::string r2 = takeFirstAvailableRegisterNotA();
+
+        $$ = "#CALL " + procId + "\n";
+
+        // Dla każdego argumentu w wywołaniu funkcji
+        for(int j = 0; j < argsVector.size(); j++)
+        {
+            std::string targetName = procId + "arg" + std::to_string(j);
+            targetName = argsAlias[targetName];
+            std::string sourceName = argsVector[j];
+
+            int sourceAddr = getAddress(sourceName);
+            int targetAddr = getAddress(targetName);
+
+            generatedLines += insertingNumber("a", sourceAddr, &$$);
+            generatedLines += insertingNumber(r1, targetAddr, &$$);
+            $$ += "STORE " + r1 + "\n";
+        }
+
+        generatedLines += insertingNumber(r1, returnAddr, &$$);
+        $$ += "RST " + r2 + "\n";
+        $$ += "INC " + r2 + "\n";
+        $$ += "SHL " + r2 + "\n";
+        $$ += "SHL " + r2 + "\n";
+        $$ += "STRK a\n";
+        $$ += "ADD " + r2 + "\n";
+        $$ += "STORE " + r1 + "\n";
+        $$ += "JUMP " + std::to_string(procAddr) + "\n";
+        generatedLines += 8;
+
+        $$ += "#END OF CALL\n";
+
+        freeRegister(r1);
+        freeRegister(r2);
+        argsVector.clear();
+    }
 ;
 
 declarations:
@@ -208,15 +325,47 @@ declarations:
 ;
 
 args_decl:
-    args_decl COMMA pidentifier
-    | args_decl COMMA T pidentifier
-    | pidentifier
-    | T pidentifier
+    args_decl COMMA pidentifier {
+        variableMap[varPrefix + $3] = currentVarAddress;
+        currentVarAddress++;
+
+        argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $3;
+        argId++;
+    }
+    | args_decl COMMA T pidentifier {
+        variableMap[varPrefix + $4] = currentVarAddress;
+        currentVarAddress++;
+
+        argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $4;
+        argId++;
+    }
+    | pidentifier {
+        variableMap[varPrefix + $1] = currentVarAddress;
+        currentVarAddress++;
+
+        argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $1;
+        argId++;
+    }
+    | T pidentifier {
+        variableMap[varPrefix + $2] = currentVarAddress;
+        currentVarAddress++;
+
+        argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $2;
+        argId++;
+    }
 ;
 
 args:
-    args COMMA pidentifier
-    | pidentifier
+    args COMMA pidentifier {
+        argsVector.push_back(varPrefix + $3);
+        // std::cout << argId << $3 << std::endl;
+        // argId++;
+    }
+    | pidentifier {
+        argsVector.push_back(varPrefix + $1);
+        // std::cout << argId << $1 << std::endl;
+        // argId++;
+    }
 ;
 
 expression:
@@ -245,9 +394,163 @@ expression:
         $$ += "PUT " + r1 + "\n";
         generatedLines += 3;
     }
-    | value ASTERISK value
-    | value SLASH value
-    | value PERCENT value
+    | value ASTERISK value {
+        std::string c = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string b = lastUsedRegister.top();
+        std::string d = takeFirstAvailableRegisterNotA();
+        freeRegister(b);
+        freeRegister(c);
+        freeRegister(d);
+
+        $$ = $1 + $3;
+        $$ += "GET " + b + "\n";
+        $$ += "JZERO " + std::to_string(generatedLines + 32) + "\n";
+        $$ += "GET " + c + "\n";
+        $$ += "JPOS " + std::to_string(generatedLines + 6) + "\n";
+        $$ += "RST " + b + "\n";
+        $$ += "JUMP " + std::to_string(generatedLines + 32) + "\n";
+        $$ += "SUB " + b + "\n";
+        $$ += "JZERO " + std::to_string(generatedLines + 14) + "\n";
+        $$ += "GET " + b + "\n";
+        $$ += "PUT " + d + "\n";
+        $$ += "GET " + c + "\n";
+        $$ += "PUT " + b + "\n";
+        $$ += "GET " + d + "\n";
+        $$ += "PUT " + c + "\n";
+        $$ += "RST " + d + "\n";
+        $$ += "GET " + c + "\n";
+        $$ += "DEC a\n";
+        $$ += "JZERO " + std::to_string(generatedLines + 29) + "\n";
+        $$ += "GET " + c + "\n";
+        $$ += "SHR " + c + "\n";
+        $$ += "SHL " + c + "\n";
+        $$ += "SUB " + c + "\n";
+        $$ += "JZERO " + std::to_string(generatedLines + 26) + "\n";
+        $$ += "GET " + b + "\n";
+        $$ += "ADD " + d + "\n";
+        $$ += "PUT " + d + "\n";
+        $$ += "SHL " + b + "\n";
+        $$ += "SHR " + c + "\n";
+        $$ += "JUMP " + std::to_string(generatedLines + 15) + "\n";
+        $$ += "GET " + b + "\n";
+        $$ += "ADD " + d + "\n";
+        $$ += "PUT " + b + "\n";
+
+        generatedLines += 32;
+    }
+    | value SLASH value {
+        std::string c = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string b = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string d = takeFirstAvailableRegisterNotA();
+        std::string e = takeFirstAvailableRegisterNotA();
+
+        $$ = $1 + $3;
+        $$ += "RST " + d + "\n";
+        $$ += "GET " + b + "\n";
+        $$ += "JZERO " + std::to_string(generatedLines + 40) + "\n";
+        $$ += "PUT " + d + "\n";
+        $$ += "RST " + b + "\n";
+        $$ += "GET " + c + "\n"; 
+        $$ += "DEC a\n"; 
+        $$ += "JZERO " + std::to_string(generatedLines + 40) + "\n";
+        $$ += "GET " + d + "\n"; 
+        $$ += "PUT " + b + "\n"; 
+        $$ += "RST " + d + "\n"; 
+        $$ += "GET " + c + "\n"; 
+        $$ += "SUB " + b + "\n"; 
+        $$ += "JPOS " + std::to_string(generatedLines + 40) + "\n";
+        $$ += "RST " + e + "\n"; 
+        $$ += "GET " + c + "\n";
+        $$ += "SUB " + b + "\n";
+        $$ += "JPOS " + std::to_string(generatedLines + 21) + "\n";
+        $$ += "SHL " + c + "\n"; 
+        $$ += "INC " + e + "\n";
+        $$ += "JUMP " + std::to_string(generatedLines + 15) + "\n";
+        $$ += "SHR " + c + "\n"; 
+        $$ += "DEC " + e + "\n"; 
+        $$ += "INC " + d + "\n"; 
+        $$ += "GET " + b + "\n"; 
+        $$ += "SUB " + c + "\n"; 
+        $$ += "PUT " + b + "\n"; 
+        $$ += "GET " + e + "\n";
+        $$ += "JZERO " + std::to_string(generatedLines + 40) + "\n";
+        $$ += "SHL " + d + "\n"; 
+        $$ += "DEC " + e + "\n"; 
+        $$ += "SHR " + c + "\n";
+        $$ += "GET " + c + "\n";
+        $$ += "SUB " + b + "\n";
+        $$ += "JPOS " + std::to_string(generatedLines + 27) + "\n";
+        $$ += "INC " + d + "\n"; 
+        $$ += "GET " + b + "\n"; 
+        $$ += "SUB " + c + "\n"; 
+        $$ += "PUT " + b + "\n"; 
+        $$ += "JUMP " + std::to_string(generatedLines + 27) + "\n";
+
+        lastUsedRegister.push(d);
+        freeRegister(b);
+        freeRegister(c);
+        freeRegister(e);
+        generatedLines += 40;
+    }
+    | value PERCENT value {
+        std::string c = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string b = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string d = takeFirstAvailableRegisterNotA();
+        std::string e = takeFirstAvailableRegisterNotA();
+
+        $$ = $1 + $3;
+        $$ += "RST " + d + "\n";
+        $$ += "GET " + b + "\n";
+        $$ += "JZERO " + std::to_string(generatedLines + 40) + "\n";
+        $$ += "PUT " + d + "\n";
+        $$ += "RST " + b + "\n";
+        $$ += "GET " + c + "\n"; 
+        $$ += "DEC a\n"; 
+        $$ += "JZERO " + std::to_string(generatedLines + 40) + "\n";
+        $$ += "GET " + d + "\n"; 
+        $$ += "PUT " + b + "\n"; 
+        $$ += "RST " + d + "\n"; 
+        $$ += "GET " + c + "\n"; 
+        $$ += "SUB " + b + "\n"; 
+        $$ += "JPOS " + std::to_string(generatedLines + 40) + "\n";
+        $$ += "RST " + e + "\n"; 
+        $$ += "GET " + c + "\n";
+        $$ += "SUB " + b + "\n";
+        $$ += "JPOS " + std::to_string(generatedLines + 21) + "\n";
+        $$ += "SHL " + c + "\n"; 
+        $$ += "INC " + e + "\n";
+        $$ += "JUMP " + std::to_string(generatedLines + 15) + "\n";
+        $$ += "SHR " + c + "\n"; 
+        $$ += "DEC " + e + "\n"; 
+        $$ += "INC " + d + "\n"; 
+        $$ += "GET " + b + "\n"; 
+        $$ += "SUB " + c + "\n"; 
+        $$ += "PUT " + b + "\n"; 
+        $$ += "GET " + e + "\n";
+        $$ += "JZERO " + std::to_string(generatedLines + 40) + "\n";
+        $$ += "SHL " + d + "\n"; 
+        $$ += "DEC " + e + "\n"; 
+        $$ += "SHR " + c + "\n";
+        $$ += "GET " + c + "\n";
+        $$ += "SUB " + b + "\n";
+        $$ += "JPOS " + std::to_string(generatedLines + 27) + "\n";
+        $$ += "INC " + d + "\n"; 
+        $$ += "GET " + b + "\n"; 
+        $$ += "SUB " + c + "\n"; 
+        $$ += "PUT " + b + "\n"; 
+        $$ += "JUMP " + std::to_string(generatedLines + 27) + "\n";
+
+        lastUsedRegister.push(b);
+        freeRegister(c);
+        freeRegister(d);
+        freeRegister(e);
+        generatedLines += 40;
+    }
 ;
 
 condition:
@@ -399,11 +702,10 @@ value:
 ;
 
 identifier:
-    pidentifier { 
+    pidentifier { // TODO: Sprawdź czy zmienna istnieje
         std::string r = takeFirstAvailableRegisterNotA();  
         std::string varName = varPrefix + $1;
-        // TODO: Sprawdź czy zmienna istnieje
-        int varAddress = variableMap[varName];
+        int varAddress = getAddress(varName);
         std::string n = intToBinary(varAddress);
 
         $$ = "RST " + r + "\n";
@@ -427,7 +729,7 @@ identifier:
     | pidentifier LSPAR num RSPAR { 
         std::string r = takeFirstAvailableRegisterNotA();
         std::string varName = varPrefix + $1;
-        int varAddress = variableMap[varName];
+        int varAddress = getAddress(varName);
         int offset = stoi($3);
         std::string n = intToBinary(varAddress + offset);
 
@@ -449,7 +751,54 @@ identifier:
 
         lastUsedRegister.push(r);
         }
-    | pidentifier LSPAR pidentifier RSPAR 
+    | pidentifier LSPAR pidentifier RSPAR  { 
+        std::string r = takeFirstAvailableRegisterNotA();  
+        std::string tabName = varPrefix + $1;
+        int tabAddress = getAddress(tabName);
+        std::string n = intToBinary(tabAddress);
+
+        $$ = "RST " + r + "\n";
+        generatedLines++;
+        for(int i = 0; i < n.size(); i++)
+        {
+            if(i > 0)
+            {
+                $$ += "SHL " + r + "\n";
+                generatedLines++;
+            }
+            if(n[i] == '1')
+            {
+                $$ += "INC " + r + "\n";
+                generatedLines++;
+            }
+        } 
+
+        std::string varName = varPrefix + $3;
+        int varAddress = getAddress(varName);
+        std::string m = intToBinary(varAddress);
+
+        $$ += "RST a\n";
+        generatedLines++;
+        for(int i = 0; i < m.size(); i++)
+        {
+            if(i > 0)
+            {
+                $$ += "SHL a\n";
+                generatedLines++;
+            }
+            if(m[i] == '1')
+            {
+                $$ += "INC a\n";
+                generatedLines++;
+            }
+        } 
+        $$ += "LOAD a\n";
+        $$ += "ADD " + r + "\n";
+        $$ += "PUT " + r + "\n";
+        generatedLines += 3;
+
+        lastUsedRegister.push(r);
+        }
 ;
 
 
@@ -469,19 +818,6 @@ identifier:
 ; */
 %%
 
-std::string takeFirstAvailableRegister()
-{
-    for(int i = 0; i < 8; i++)
-        if(availableRegister[i])
-        {
-            availableRegister[i] = false;
-            std::string s(1, ('a' + i));
-            return s;
-        }
-            
-    throw "Brak wolnych rejestrów";
-}
-
 std::string takeFirstAvailableRegisterNotA()
 {
     for(int i = 1; i < 8; i++)
@@ -491,10 +827,9 @@ std::string takeFirstAvailableRegisterNotA()
             std::string s(1, ('a' + i));
             return s;
         }
-            
+    
     throw "Brak wolnych rejestrów";
 }
-
 
 void freeRegister(std::string rx)
 {
@@ -502,15 +837,21 @@ void freeRegister(std::string rx)
     availableRegister[x - 'a'] = true;
 }
 
-int countLines(std::string s)
-{
-    return std::count(s.begin(), s.end(), '\n');
-}
-
 void printCmd(std::string cmd)
 {
-    std::cout << cmd;
-    /* generatedLines += countLines(cmd); */
+    outputFile << cmd;
+}
+
+int getAddress(std::string var)
+{
+    std::map<std::string, int>::iterator it;
+    it = variableMap.find(var);
+    if(it != variableMap.end())
+    {
+        return it->second;
+    }
+    std::cout << "Próba dostępu do niezadeklarowanej zmiennej \"" << var << "\" w linii " << yylineno << std::endl;
+    throw "VariableError";
 }
 
 int yyerror(char const* s)
@@ -521,12 +862,21 @@ int yyerror(char const* s)
 
 int main(int argc, char const *argv[])
 {
-    // Otworzenie pliku wejściowego i wyjściowego
-    if(argc > 1) 
+
+    if(argc != 3)
     {
-        FILE* f;
-        f = fopen(argv[1], "r");
-        yyin = f;
+        std::cout << "Poprawna składnia: \n\t./kompilator <plik źródłowy> <nazwa pliku docelowego>" << std::endl;
+        return 44;
+    }
+    // Otworzenie pliku wejściowego i wyjściowego
+    FILE* f;
+    f = fopen(argv[1], "r");
+    yyin = f;
+
+    outputFile.open(argv[2], std::ios::out);
+    if (!outputFile.good())
+    {
+        throw "Nie udało się utworzyć pliku wynikowego";
     }
 
     for(int i = 0; i < 8; i++)
@@ -545,12 +895,14 @@ int main(int argc, char const *argv[])
     generatedLines += 8;
 
     yyparse();
-    printCmd("HALT\n");
+
+    outputFile.close();
+
     /* printf("Przeczytano %d linii\n", yylineno); */
-    /* std::map<std::string, int>::iterator it = variableMap.begin();
+    std::map<std::string, int>::iterator it = variableMap.begin();
     while(it != variableMap.end()) {
         std::cout << "map[" << it->first << "] = " << it->second << std::endl;
         ++it;
-    } */
+    }
     return 0;
 }
