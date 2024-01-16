@@ -81,7 +81,7 @@
 %%
 program_all:
     procedures main {
-        printCmd("JUMP " + std::to_string(generatedLines - countLines($2) + 1) + "\n");
+        // printCmd("JUMP " + std::to_string(generatedLines - countLines($2) + 1) + "\n");
         printCmd($1);
         printCmd($2);
     }
@@ -153,13 +153,13 @@ procedures:
         varPrefix = "proc" + std::to_string(currentProcedureId) + "_"; 
         }
     | {
-        generatedLines++;
+        // generatedLines++;
     }
 ;
 
 main:
     PROGRAM IS declarations IN commands END {
-        $$ = "#MAIN\n" + $5;
+        $$ = "#MAIN " + std::to_string(generatedLines) + "\n" + $5;
         $$ += "HALT\n";
         generatedLines++;
     }
@@ -200,25 +200,27 @@ command:
 
         $$ = $2;
         $$ += "JPOS " + std::to_string(addr6) + "\n";
-        $$ += $4;
+        $$ += incrementJumps($4);
         $$ += "JUMP " + std::to_string(generatedLines) + "\n";
-        $$ += $6;
+        $$ += incrementJumps(incrementJumps($6));
     }
     | IF condition THEN commands ENDIF {
         generatedLines += 1;
 
         $$ = $2;
         $$ += "JPOS " + std::to_string(generatedLines) + "\n";
-        $$ += $4;
+        $$ += incrementJumps($4);
     }
     | WHILE condition DO commands ENDWHILE {
-        int loopBegin = generatedLines - countLines($2) - countLines($4) + 1;
+        int loopBegin = generatedLines - countLines($2) - countLines($4);
         generatedLines += 2;
 
-        $$ = $2;
+        $$ = "#WHILE" + std::to_string(loopBegin) + "\n#CONDITION\n" + $2;
+        $$ += "#ENDCONDITION\n";
         $$ += "JPOS " + std::to_string(generatedLines) + "\n";
-        $$ += $4;
+        $$ += incrementJumps($4);
         $$ += "JUMP " + std::to_string(loopBegin) + "\n";
+        $$ += "#ENDWHILE\n";
     }
     | REPEAT commands UNTIL condition SEMICOLON {
         int loopBegin = generatedLines - countLines($2) - countLines($4);
@@ -399,11 +401,11 @@ expression:
         lastUsedRegister.pop();
         std::string b = lastUsedRegister.top();
         std::string d = takeFirstAvailableRegisterNotA();
-        freeRegister(b);
         freeRegister(c);
         freeRegister(d);
 
         $$ = $1 + $3;
+        $$ += "#MNOŻENIE " + std::to_string(generatedLines) + "\n";
         $$ += "GET " + b + "\n";
         $$ += "JZERO " + std::to_string(generatedLines + 32) + "\n";
         $$ += "GET " + c + "\n";

@@ -6,31 +6,12 @@ RST e
 RST f
 RST g
 RST h
-JUMP 9
-#MAIN
+#MAIN 91
 RST b
 RST c
 INC c
 GET c
 STORE b
-RST b
-LOAD b
-PUT b
-RST c
-INC c
-SHL c
-SHL c
-SHL c
-SHL c
-SHL c
-SHL c
-SHL c
-SHL c
-SHL c
-SHL c
-GET b
-SUB c
-JPOS 79
 RST b
 RST c
 LOAD c
@@ -38,14 +19,15 @@ PUT c
 RST d
 INC d
 SHL d
+#MNOŻENIE 20
 GET c
-JZERO 70
-GET d
-JPOS 44
-RST c
-JUMP 70
-SUB c
 JZERO 52
+GET d
+JPOS 26
+RST c
+JUMP 52
+SUB c
+JZERO 34
 GET c
 PUT e
 GET d
@@ -55,18 +37,18 @@ PUT d
 RST e
 GET d
 DEC a
-JZERO 67
+JZERO 49
 GET d
 SHR d
 SHL d
 SUB d
-JZERO 64
+JZERO 46
 GET c
 ADD e
 PUT e
 SHL c
 SHR d
-JUMP 53
+JUMP 35
 GET c
 ADD e
 PUT c
@@ -77,5 +59,39 @@ LOAD b
 PUT b
 GET b
 WRITE
-JUMP 14
+#WHILE59
+RST b
+LOAD b
+PUT b
+RST c
+INC c
+SHL c
+SHL c
+SHL c
+SHL c
+SHL c
+SHL c
+GET b
+SUB c
+#ENDCONDITION
+JPOS 91
+RST b
+RST c
+LOAD c
+PUT c
+RST d
+INC d
+SHL d
+GET c
+ADD d
+PUT c
+GET c
+STORE b
+RST b
+LOAD b
+PUT b
+GET b
+WRITE
+JUMP 59
+#ENDWHILE
 HALT

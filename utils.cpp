@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <sstream>
 #include "utils.hpp"
 
 std::string intToBinary(int n)
@@ -45,4 +46,17 @@ int insertingNumber(std::string r, int number, std::string* target)
         }
     } 
     return generatedLines;
+}
+
+std::string incrementJumps(std::string instructionBlock)
+{
+    // std::stringstream ss(&instructionBlock);
+    // std::string to;
+    // std::string result = "";
+
+    // while(std::getline(ss,to,'\n')){
+    //     result += to + "\n";
+    // }
+
+    return instructionBlock;
 }

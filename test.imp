@@ -2,8 +2,11 @@ PROGRAM IS
     b
 IN
     b := 1;
-    WHILE b <= 1024 DO
-        b := b * 2;
+    b := b * 2;
+    WRITE b;
+
+    WHILE b <= 64 DO
+        b := b + 2;
         WRITE b;
     ENDWHILE
 END
