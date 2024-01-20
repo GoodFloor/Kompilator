@@ -3,7 +3,7 @@
 #include <sstream>
 #include "utils.hpp"
 
-std::string intToBinary(int n)
+std::string intToBinary(unsigned long long n)
 {
     std::string result = "";
     while (n > 0)
@@ -21,7 +21,7 @@ std::string intToBinary(int n)
     return result;    
 }
 
-std::string insertingNumber(std::string r, int number)
+std::string insertingNumber(std::string r, unsigned long long number)
 {
     std::string commands;
     std::string n = intToBinary(number);

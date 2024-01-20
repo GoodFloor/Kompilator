@@ -15,12 +15,12 @@
     std::string takeFirstAvailableRegisterNotA();
     void freeRegister(std::string rx);
     void printCmd(std::string cmd);
-    int getAddress(std::string var);
+    unsigned long long getAddress(std::string var);
 
     int currentProcedureId = 0;
-    int currentVarAddress = 0;
+    unsigned long long currentVarAddress = 0;
     std::string varPrefix = "proc" + std::to_string(currentProcedureId) + "_";
-    std::map<std::string, int> variableMap;
+    std::map<std::string, unsigned long long> variableMap;
     std::map<std::string, std::string> procedureAlias;
     std::map<std::string, int> procedureAddress;
     std::map<std::string, std::string> argsAlias;
@@ -100,7 +100,7 @@ procedures:
 
         std::string r = takeFirstAvailableRegisterNotA();  
         std::string varName = varPrefix + "@return";
-        int varAddress = getAddress(varName);
+        unsigned long long varAddress = getAddress(varName);
 
         $$ = "#PROCEDURE " + varPrefix + "\n" + $7;
 
@@ -115,7 +115,7 @@ procedures:
 
         std::string r = takeFirstAvailableRegisterNotA();  
         std::string varName = varPrefix + "@return";
-        int varAddress = getAddress(varName);
+        unsigned long long varAddress = getAddress(varName);
 
         $$ = "#PROCEDURE " + varPrefix + "\n" + $6;
 
@@ -303,7 +303,7 @@ declarations:
     }
     | declarations COMMA pidentifier LSPAR num RSPAR {
         variableMap[varPrefix + $3] = currentVarAddress;
-        currentVarAddress += stoi($5);
+        currentVarAddress += stoull($5);
     }
     | pidentifier {
         variableMap[varPrefix + $1] = currentVarAddress;
@@ -311,7 +311,7 @@ declarations:
     }
     | pidentifier LSPAR num RSPAR {
         variableMap[varPrefix + $1] = currentVarAddress;
-        currentVarAddress += stoi($3);
+        currentVarAddress += stoull($3);
     }
 ;
 
@@ -716,7 +716,7 @@ condition:
 
 value:
     num {
-        int x = stoi($1);
+        unsigned long long x = stoull($1);
         std::string r = takeFirstAvailableRegisterNotA();
 
         $$ = insertingNumber(r, x);
@@ -734,7 +734,7 @@ identifier:
     pidentifier { 
         std::string r = takeFirstAvailableRegisterNotA();  
         std::string varName = varPrefix + $1;
-        int varAddress = getAddress(varName);
+        unsigned long long varAddress = getAddress(varName);
 
         $$ = insertingNumber(r, varAddress);
 
@@ -743,8 +743,8 @@ identifier:
     | pidentifier LSPAR num RSPAR { 
         std::string r = takeFirstAvailableRegisterNotA();
         std::string varName = varPrefix + $1;
-        int varAddress = getAddress(varName);
-        int offset = stoi($3);
+        unsigned long long varAddress = getAddress(varName);
+        unsigned long long offset = stoull($3);
 
         $$ = insertingNumber(r, varAddress + offset);
 
@@ -758,7 +758,7 @@ identifier:
         $$ = insertingNumber(r, tabAddress);
 
         std::string varName = varPrefix + $3;
-        int varAddress = getAddress(varName);
+        unsigned long long varAddress = getAddress(varName);
 
         $$ += insertingNumber("a", varAddress);
 
@@ -806,9 +806,9 @@ void freeRegister(std::string rx)
     availableRegister[x - 'a'] = true;
 }
 
-int getAddress(std::string var)
+unsigned long long getAddress(std::string var)
 {
-    std::map<std::string, int>::iterator it;
+    std::map<std::string, unsigned long long>::iterator it;
     it = variableMap.find(var);
     if(it != variableMap.end())
     {
@@ -845,7 +845,7 @@ int main(int argc, char const *argv[])
 
     printCmd(endResult, argv[2]);
 
-    std::map<std::string, int>::iterator it = variableMap.begin();
+    std::map<std::string, unsigned long long>::iterator it = variableMap.begin();
     while(it != variableMap.end()) {
         std::cout << "map[" << it->first << "] = " << it->second << std::endl;
         ++it;

@@ -85,12 +85,12 @@
     std::string takeFirstAvailableRegisterNotA();
     void freeRegister(std::string rx);
     void printCmd(std::string cmd);
-    int getAddress(std::string var);
+    unsigned long long getAddress(std::string var);
 
     int currentProcedureId = 0;
-    int currentVarAddress = 0;
+    unsigned long long currentVarAddress = 0;
     std::string varPrefix = "proc" + std::to_string(currentProcedureId) + "_";
-    std::map<std::string, int> variableMap;
+    std::map<std::string, unsigned long long> variableMap;
     std::map<std::string, std::string> procedureAlias;
     std::map<std::string, int> procedureAddress;
     std::map<std::string, std::string> argsAlias;
@@ -1514,7 +1514,7 @@ yyreduce:
 
         std::string r = takeFirstAvailableRegisterNotA();  
         std::string varName = varPrefix + "@return";
-        int varAddress = getAddress(varName);
+        unsigned long long varAddress = getAddress(varName);
 
         yyval = "#PROCEDURE " + varPrefix + "\n" + yyvsp[-1];
 
@@ -1534,7 +1534,7 @@ yyreduce:
 
         std::string r = takeFirstAvailableRegisterNotA();  
         std::string varName = varPrefix + "@return";
-        int varAddress = getAddress(varName);
+        unsigned long long varAddress = getAddress(varName);
 
         yyval = "#PROCEDURE " + varPrefix + "\n" + yyvsp[-1];
 
@@ -1783,7 +1783,7 @@ yyreduce:
 #line 304 "kompilator.y"
                                                      {
         variableMap[varPrefix + yyvsp[-3]] = currentVarAddress;
-        currentVarAddress += stoi(yyvsp[-1]);
+        currentVarAddress += stoull(yyvsp[-1]);
     }
 #line 1789 "kompilator_y.cpp"
     break;
@@ -1801,7 +1801,7 @@ yyreduce:
 #line 312 "kompilator.y"
                                   {
         variableMap[varPrefix + yyvsp[-3]] = currentVarAddress;
-        currentVarAddress += stoi(yyvsp[-1]);
+        currentVarAddress += stoull(yyvsp[-1]);
     }
 #line 1807 "kompilator_y.cpp"
     break;
@@ -2280,7 +2280,7 @@ yyreduce:
   case 42: /* value: num  */
 #line 718 "kompilator.y"
         {
-        int x = stoi(yyvsp[0]);
+        unsigned long long x = stoull(yyvsp[0]);
         std::string r = takeFirstAvailableRegisterNotA();
 
         yyval = insertingNumber(r, x);
@@ -2305,7 +2305,7 @@ yyreduce:
                 { 
         std::string r = takeFirstAvailableRegisterNotA();  
         std::string varName = varPrefix + yyvsp[0];
-        int varAddress = getAddress(varName);
+        unsigned long long varAddress = getAddress(varName);
 
         yyval = insertingNumber(r, varAddress);
 
@@ -2319,8 +2319,8 @@ yyreduce:
                                   { 
         std::string r = takeFirstAvailableRegisterNotA();
         std::string varName = varPrefix + yyvsp[-3];
-        int varAddress = getAddress(varName);
-        int offset = stoi(yyvsp[-1]);
+        unsigned long long varAddress = getAddress(varName);
+        unsigned long long offset = stoull(yyvsp[-1]);
 
         yyval = insertingNumber(r, varAddress + offset);
 
@@ -2339,7 +2339,7 @@ yyreduce:
         yyval = insertingNumber(r, tabAddress);
 
         std::string varName = varPrefix + yyvsp[-1];
-        int varAddress = getAddress(varName);
+        unsigned long long varAddress = getAddress(varName);
 
         yyval += insertingNumber("a", varAddress);
 
@@ -2599,9 +2599,9 @@ void freeRegister(std::string rx)
     availableRegister[x - 'a'] = true;
 }
 
-int getAddress(std::string var)
+unsigned long long getAddress(std::string var)
 {
-    std::map<std::string, int>::iterator it;
+    std::map<std::string, unsigned long long>::iterator it;
     it = variableMap.find(var);
     if(it != variableMap.end())
     {
@@ -2638,7 +2638,7 @@ int main(int argc, char const *argv[])
 
     printCmd(endResult, argv[2]);
 
-    std::map<std::string, int>::iterator it = variableMap.begin();
+    std::map<std::string, unsigned long long>::iterator it = variableMap.begin();
     while(it != variableMap.end()) {
         std::cout << "map[" << it->first << "] = " << it->second << std::endl;
         ++it;
