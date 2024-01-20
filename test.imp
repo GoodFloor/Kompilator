@@ -1,10 +1,5 @@
 PROGRAM IS
-    p, q
+    b
 IN
-    p := 16;
-    q := 1;
-    REPEAT 
-        p := p + 1;
-        WRITE p;
-    UNTIL p > 16;
+    b := 4 * 4;
 END

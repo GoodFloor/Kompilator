@@ -1,10 +1,10 @@
 %{
     #include <stdio.h>
-    #include <algorithm>
     #include <iostream>
     #include <map>
     #include <stack>
     #include <string>
+    #include <vector>
     #include "utils.hpp"
 
     extern int yylineno;
@@ -12,20 +12,25 @@
 
     int yylex(void);
     int yyerror(char const*);
-    std::string takeFirstAvailableRegister();
     std::string takeFirstAvailableRegisterNotA();
     void freeRegister(std::string rx);
     void printCmd(std::string cmd);
-    int countLines(std::string s);
+    int getAddress(std::string var);
 
-
-    int generatedLines = 0;
     int currentProcedureId = 0;
     int currentVarAddress = 0;
     std::string varPrefix = "proc" + std::to_string(currentProcedureId) + "_";
     std::map<std::string, int> variableMap;
+    std::map<std::string, std::string> procedureAlias;
+    std::map<std::string, int> procedureAddress;
+    std::map<std::string, std::string> argsAlias;
     bool availableRegister[8];
     std::stack<std::string> lastUsedRegister;
+    int argId = 0;
+    std::vector<std::string> argsVector;
+    int jumpId = 0;
+    std::string addressPrefix = "@JUMP";
+    std::string endResult = "";
 %}
 
 %define api.value.type {std::string}
@@ -74,15 +79,50 @@
 
 %%
 program_all:
-    procedures main
+    procedures main {
+        std::string addr1 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+
+        endResult = "RST a\nRST b\nRST c\nRST d\nRST e\nRST f\nRST g\nRST h\n";
+        endResult += "JUMP " + addr1 + "\n";
+        endResult += "# procedury\n";
+        endResult += $1;
+        endResult += "# main\n";
+        endResult += addr1 + "\n";
+        endResult += $2;
+    }
 ;
 
 procedures:
     procedures PROCEDURE proc_head IS declarations IN commands END { 
+        variableMap[varPrefix + "@return"] = currentVarAddress;
+        currentVarAddress++;
+
+        std::string r = takeFirstAvailableRegisterNotA();  
+        std::string varName = varPrefix + "@return";
+        int varAddress = getAddress(varName);
+
+        $$ = "#PROCEDURE " + varPrefix + "\n" + $7;
+
+        $$ += insertingNumber(r, varAddress);
+
         currentProcedureId++;
         varPrefix = "proc" + std::to_string(currentProcedureId) + "_"; 
         }
     | procedures PROCEDURE proc_head IS IN commands END { 
+        variableMap[varPrefix + "@return"] = currentVarAddress;
+        currentVarAddress++;
+
+        std::string r = takeFirstAvailableRegisterNotA();  
+        std::string varName = varPrefix + "@return";
+        int varAddress = getAddress(varName);
+
+        $$ = "#PROCEDURE " + varPrefix + "\n" + $6;
+
+        $$ += insertingNumber(r, varAddress);
+
+        $$ += "JUMPR " + r + "\n";
+
         currentProcedureId++;
         varPrefix = "proc" + std::to_string(currentProcedureId) + "_"; 
         }
@@ -91,10 +131,12 @@ procedures:
 
 main:
     PROGRAM IS declarations IN commands END {
-        printCmd($5);
+        $$ = $5;
+        $$ += "HALT\n";
     }
     | PROGRAM IS IN commands END {
-        printCmd($4);
+        $$ = $4;
+        $$ += "HALT\n";
     }
 ;
 
@@ -116,53 +158,77 @@ command:
         lastUsedRegister.pop();
         freeRegister(r1);
 
-        $$ = $1 + $4;
+        $$ = "# x := y;\n";
+        $$ += $1 + $4;
         $$ += "GET " + r4 + "\n";
         $$ += "STORE " + r1 + "\n";
-        generatedLines += 2;
     }
     | IF condition THEN commands ELSE commands ENDIF {
-        generatedLines += 2;
-        int len6 = countLines($6);
-        int addr6 = generatedLines - len6;
+        std::string addr1 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string addr2 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
 
-        $$ = $2;
-        $$ += "JPOS " + std::to_string(addr6) + "\n";
+        $$ = "# if-else\n";
+        $$ += $2;
+        $$ += "JPOS " + addr1 + "\n";
+        $$ += "# if true\n";
         $$ += $4;
-        $$ += "JUMP " + std::to_string(generatedLines) + "\n";
+        $$ += "JUMP " + addr2 + "\n";
+        $$ += "# if false\n";
+        $$ += addr1 + "\n";
         $$ += $6;
+        $$ += addr2 + "\n";
+        $$ += "# endif\n";
     }
     | IF condition THEN commands ENDIF {
-        generatedLines += 1;
+        std::string addr1 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
 
-        $$ = $2;
-        $$ += "JPOS " + std::to_string(generatedLines) + "\n";
+        $$ = "# if\n";
+        $$ += $2;
+        $$ += "JPOS " + addr1 + "\n";
+        $$ += "# if true\n";
         $$ += $4;
+        $$ += addr1 + "\n";
+        $$ += "# endif\n";
     }
     | WHILE condition DO commands ENDWHILE {
-        int loopBegin = generatedLines - countLines($2) - countLines($4);
-        generatedLines += 2;
+        std::string addr1 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string addr2 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
 
-        $$ = $2;
-        $$ += "JPOS " + std::to_string(generatedLines) + "\n";
+        $$ = "# while\n";
+        $$ += addr2 + "\n";
+        $$ += $2;
+        $$ += "JPOS " + addr1 + "\n";
+        $$ += "# while true\n";
         $$ += $4;
-        $$ += "JUMP " + std::to_string(loopBegin) + "\n";
+        $$ += "JUMP " + addr2 + "\n";
+        $$ += addr1 + "\n";
+        $$ += "# endwhile\n";
     }
     | REPEAT commands UNTIL condition SEMICOLON {
-        int loopBegin = generatedLines - countLines($2) - countLines($4);
+        std::string addr1 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
 
-        $$ = $2 + $4;
-        $$ += "JPOS " + std::to_string(loopBegin) + "\n";
-        generatedLines += 1;
+        $$ = "# repeat\n";
+        $$ += addr1 + "\n";
+        $$ += $2 + $4;
+        $$ += "# until\n";
+        $$ += "JPOS " + addr1 + "\n";
     }
-    | proc_call SEMICOLON
+    | proc_call SEMICOLON {
+        $$ = $1;
+    }
     | READ identifier SEMICOLON {
         std::string r = lastUsedRegister.top();
 
-        $$ = $2;
+        $$ = "# read x;\n";
+        $$ += $2;
         $$ += "READ\n";
         $$ += "STORE " + r + "\n";
-        generatedLines += 2;
 
         freeRegister(r);
         lastUsedRegister.pop();
@@ -170,10 +236,10 @@ command:
     | WRITE value SEMICOLON {
         std::string r = lastUsedRegister.top();
 
-        $$ = $2;
+        $$ = "# write x;\n";
+        $$ += $2;
         $$ += "GET " + r + "\n";
         $$ += "WRITE\n";
-        generatedLines += 2;
 
         freeRegister(r);
         lastUsedRegister.pop();
@@ -181,11 +247,53 @@ command:
 ;
 
 proc_head:
-    pidentifier LPAR args_decl RPAR
+    pidentifier LPAR args_decl RPAR {
+        procedureAlias[$1] = varPrefix;
+        argId = 0;
+    }
 ;
 
 proc_call:
-    pidentifier LPAR args RPAR
+    pidentifier LPAR args RPAR {
+        std::string procId = procedureAlias[$1];
+        int procAddr = procedureAddress[procId];
+        int returnAddr = getAddress(procId + "@return");
+        std::string r1 = takeFirstAvailableRegisterNotA();  
+        std::string r2 = takeFirstAvailableRegisterNotA();
+
+        $$ = "#CALL " + procId + "\n";
+
+        // Dla każdego argumentu w wywołaniu funkcji
+        for(int j = 0; j < argsVector.size(); j++)
+        {
+            std::string targetName = procId + "arg" + std::to_string(j);
+            targetName = argsAlias[targetName];
+            std::string sourceName = argsVector[j];
+
+            int sourceAddr = getAddress(sourceName);
+            int targetAddr = getAddress(targetName);
+
+            $$ += insertingNumber("a", sourceAddr);
+            $$ += insertingNumber(r1, targetAddr);
+            $$ += "STORE " + r1 + "\n";
+        }
+
+        $$ += insertingNumber(r1, returnAddr);
+        $$ += "RST " + r2 + "\n";
+        $$ += "INC " + r2 + "\n";
+        $$ += "SHL " + r2 + "\n";
+        $$ += "SHL " + r2 + "\n";
+        $$ += "STRK a\n";
+        $$ += "ADD " + r2 + "\n";
+        $$ += "STORE " + r1 + "\n";
+        $$ += "JUMP " + std::to_string(procAddr) + "\n";
+
+        $$ += "#END OF CALL\n";
+
+        freeRegister(r1);
+        freeRegister(r2);
+        argsVector.clear();
+    }
 ;
 
 declarations:
@@ -208,15 +316,47 @@ declarations:
 ;
 
 args_decl:
-    args_decl COMMA pidentifier
-    | args_decl COMMA T pidentifier
-    | pidentifier
-    | T pidentifier
+    args_decl COMMA pidentifier {
+        variableMap[varPrefix + $3] = currentVarAddress;
+        currentVarAddress++;
+
+        argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $3;
+        argId++;
+    }
+    | args_decl COMMA T pidentifier {
+        variableMap[varPrefix + $4] = currentVarAddress;
+        currentVarAddress++;
+
+        argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $4;
+        argId++;
+    }
+    | pidentifier {
+        variableMap[varPrefix + $1] = currentVarAddress;
+        currentVarAddress++;
+
+        argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $1;
+        argId++;
+    }
+    | T pidentifier {
+        variableMap[varPrefix + $2] = currentVarAddress;
+        currentVarAddress++;
+
+        argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $2;
+        argId++;
+    }
 ;
 
 args:
-    args COMMA pidentifier
-    | pidentifier
+    args COMMA pidentifier {
+        argsVector.push_back(varPrefix + $3);
+        // std::cout << argId << $3 << std::endl;
+        // argId++;
+    }
+    | pidentifier {
+        argsVector.push_back(varPrefix + $1);
+        // std::cout << argId << $1 << std::endl;
+        // argId++;
+    }
 ;
 
 expression:
@@ -231,7 +371,6 @@ expression:
         $$ += "GET " + r1 + "\n";
         $$ += "ADD " + r3 + "\n";
         $$ += "PUT " + r1 + "\n";
-        generatedLines += 3;
     }
     | value MINUS value {
         std::string r3 = lastUsedRegister.top();
@@ -243,11 +382,207 @@ expression:
         $$ += "GET " + r1 + "\n";
         $$ += "SUB " + r3 + "\n";
         $$ += "PUT " + r1 + "\n";
-        generatedLines += 3;
     }
-    | value ASTERISK value
-    | value SLASH value
-    | value PERCENT value
+    | value ASTERISK value {
+        std::string c = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string b = lastUsedRegister.top();
+        std::string d = takeFirstAvailableRegisterNotA();
+        freeRegister(c);
+        freeRegister(d);
+
+        std::string line6 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string line14 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string line15 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string line26 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string line29 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string line32 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+
+        $$ = $1 + $3;
+        $$ += "# mnożenie\n";
+        $$ += "GET " + b + "\n";
+        $$ += "JZERO " + line32 + "\n";
+        $$ += "GET " + c + "\n";
+        $$ += "JPOS " + line6 + "\n";
+        $$ += "RST " + b + "\n";
+        $$ += "JUMP " + line32 + "\n";
+        $$ += line6 + "\n";
+        $$ += "SUB " + b + "\n";
+        $$ += "JZERO " + line14 + "\n";
+        $$ += "GET " + b + "\n";
+        $$ += "PUT " + d + "\n";
+        $$ += "GET " + c + "\n";
+        $$ += "PUT " + b + "\n";
+        $$ += "GET " + d + "\n";
+        $$ += "PUT " + c + "\n";
+        $$ += line14 + "\n";
+        $$ += "RST " + d + "\n";
+        $$ += line15 + "\n";
+        $$ += "GET " + c + "\n";
+        $$ += "DEC a\n";
+        $$ += "JZERO " + line29 + "\n";
+        $$ += "GET " + c + "\n";
+        $$ += "SHR " + c + "\n";
+        $$ += "SHL " + c + "\n";
+        $$ += "SUB " + c + "\n";
+        $$ += "JZERO " + line26 + "\n";
+        $$ += "GET " + b + "\n";
+        $$ += "ADD " + d + "\n";
+        $$ += "PUT " + d + "\n";
+        $$ += line26 + "\n";
+        $$ += "SHL " + b + "\n";
+        $$ += "SHR " + c + "\n";
+        $$ += "JUMP " + line15 + "\n";
+        $$ += line29 + "\n";
+        $$ += "GET " + b + "\n";
+        $$ += "ADD " + d + "\n";
+        $$ += "PUT " + b + "\n";
+        $$ += line32 + "\n";
+    }
+    | value SLASH value {
+        std::string c = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string b = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string d = takeFirstAvailableRegisterNotA();
+        std::string e = takeFirstAvailableRegisterNotA();
+
+        std::string line15 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string line21 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string line27 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string line40 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+
+        $$ = $1 + $3;
+        $$ += "# dzielenie\n";
+        $$ += "RST " + d + "\n";
+        $$ += "GET " + b + "\n";
+        $$ += "JZERO " + line40 + "\n";
+        $$ += "PUT " + d + "\n";
+        $$ += "RST " + b + "\n";
+        $$ += "GET " + c + "\n"; 
+        $$ += "DEC a\n"; 
+        $$ += "JZERO " + line40 + "\n";
+        $$ += "GET " + d + "\n"; 
+        $$ += "PUT " + b + "\n"; 
+        $$ += "RST " + d + "\n"; 
+        $$ += "GET " + c + "\n"; 
+        $$ += "SUB " + b + "\n"; 
+        $$ += "JPOS " + line40 + "\n";
+        $$ += "RST " + e + "\n"; 
+        $$ += line15 + "\n";
+        $$ += "GET " + c + "\n";
+        $$ += "SUB " + b + "\n";
+        $$ += "JPOS " + line21 + "\n";
+        $$ += "SHL " + c + "\n"; 
+        $$ += "INC " + e + "\n";
+        $$ += "JUMP " + line15 + "\n";
+        $$ += line21 + "\n";
+        $$ += "SHR " + c + "\n"; 
+        $$ += "DEC " + e + "\n"; 
+        $$ += "INC " + d + "\n"; 
+        $$ += "GET " + b + "\n"; 
+        $$ += "SUB " + c + "\n"; 
+        $$ += "PUT " + b + "\n"; 
+        $$ += line27 + "\n";
+        $$ += "GET " + e + "\n";
+        $$ += "JZERO " + line40 + "\n";
+        $$ += "SHL " + d + "\n"; 
+        $$ += "DEC " + e + "\n"; 
+        $$ += "SHR " + c + "\n";
+        $$ += "GET " + c + "\n";
+        $$ += "SUB " + b + "\n";
+        $$ += "JPOS " + line27 + "\n";
+        $$ += "INC " + d + "\n"; 
+        $$ += "GET " + b + "\n"; 
+        $$ += "SUB " + c + "\n"; 
+        $$ += "PUT " + b + "\n"; 
+        $$ += "JUMP " + line27 + "\n";
+        $$ += line40 + "\n";
+
+        lastUsedRegister.push(d);
+        freeRegister(b);
+        freeRegister(c);
+        freeRegister(e);
+    }
+    | value PERCENT value {
+        std::string c = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string b = lastUsedRegister.top();
+        lastUsedRegister.pop();
+        std::string d = takeFirstAvailableRegisterNotA();
+        std::string e = takeFirstAvailableRegisterNotA();
+
+        std::string line15 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string line21 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string line27 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string line40 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+
+        $$ = $1 + $3;
+        $$ += "# reszta\n";
+        $$ += "RST " + d + "\n";
+        $$ += "GET " + b + "\n";
+        $$ += "JZERO " + line40 + "\n";
+        $$ += "PUT " + d + "\n";
+        $$ += "RST " + b + "\n";
+        $$ += "GET " + c + "\n"; 
+        $$ += "DEC a\n"; 
+        $$ += "JZERO " + line40 + "\n";
+        $$ += "GET " + d + "\n"; 
+        $$ += "PUT " + b + "\n"; 
+        $$ += "RST " + d + "\n"; 
+        $$ += "GET " + c + "\n"; 
+        $$ += "SUB " + b + "\n"; 
+        $$ += "JPOS " + line40 + "\n";
+        $$ += "RST " + e + "\n"; 
+        $$ += line15 + "\n";
+        $$ += "GET " + c + "\n";
+        $$ += "SUB " + b + "\n";
+        $$ += "JPOS " + line21 + "\n";
+        $$ += "SHL " + c + "\n"; 
+        $$ += "INC " + e + "\n";
+        $$ += "JUMP " + line15 + "\n";
+        $$ += line21 + "\n";
+        $$ += "SHR " + c + "\n"; 
+        $$ += "DEC " + e + "\n"; 
+        $$ += "INC " + d + "\n"; 
+        $$ += "GET " + b + "\n"; 
+        $$ += "SUB " + c + "\n"; 
+        $$ += "PUT " + b + "\n"; 
+        $$ += line27 + "\n";
+        $$ += "GET " + e + "\n";
+        $$ += "JZERO " + line40 + "\n";
+        $$ += "SHL " + d + "\n"; 
+        $$ += "DEC " + e + "\n"; 
+        $$ += "SHR " + c + "\n";
+        $$ += "GET " + c + "\n";
+        $$ += "SUB " + b + "\n";
+        $$ += "JPOS " + line27 + "\n";
+        $$ += "INC " + d + "\n"; 
+        $$ += "GET " + b + "\n"; 
+        $$ += "SUB " + c + "\n"; 
+        $$ += "PUT " + b + "\n"; 
+        $$ += "JUMP " + line27 + "\n";
+        $$ += line40 + "\n";
+
+        lastUsedRegister.push(b);
+        freeRegister(c);
+        freeRegister(d);
+        freeRegister(e);
+    }
 ;
 
 condition:
@@ -268,7 +603,6 @@ condition:
         $$ += "GET " + r3 + "\n";
         $$ += "SUB " + r1 + "\n";
         $$ += "ADD " + rt + "\n";
-        generatedLines += 6;
     }
     | value NEGATION EQUAL value {
         std::string r4 = lastUsedRegister.top();
@@ -280,6 +614,11 @@ condition:
         freeRegister(rt);
         freeRegister(r1);
 
+        std::string addr1 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string addr2 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+
         $$ = $1 + $4;
         $$ += "GET " + r1 + "\n";
         $$ += "SUB " + r4 + "\n";
@@ -287,30 +626,35 @@ condition:
         $$ += "GET " + r4 + "\n";
         $$ += "SUB " + r1 + "\n";
         $$ += "ADD " + rt + "\n";
-        generatedLines += 6;
 
-        $$ += "JPOS " + std::to_string(generatedLines + 3) + "\n";
+        $$ += "JPOS " + addr1 + "\n";
         $$ += "INC a\n";
-        $$ += "JUMP " + std::to_string(generatedLines + 4) + "\n";
+        $$ += "JUMP " + addr2 + "\n";
+        $$ += addr1 + "\n";
         $$ += "RST a\n"; 
-        generatedLines += 4;
+        $$ += addr2 + "\n";
     }
     | value MORE value {
         std::string r3 = lastUsedRegister.top();
         lastUsedRegister.pop();
         std::string r1 = lastUsedRegister.top();
         lastUsedRegister.pop();
+
+        std::string addr1 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string addr2 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
         
         $$ = $1 + $3;
         $$ += "GET " + r1 + "\n";
         $$ += "SUB " + r3 + "\n";
-        generatedLines += 2;
 
-        $$ += "JPOS " + std::to_string(generatedLines + 3) + "\n";
+        $$ += "JPOS " + addr1 + "\n";
         $$ += "INC a\n";
-        $$ += "JUMP " + std::to_string(generatedLines + 4) + "\n";
+        $$ += "JUMP " + addr2 + "\n";
+        $$ += addr1 + "\n";
         $$ += "RST a\n"; 
-        generatedLines += 4;
+        $$ += addr2 + "\n";
 
         freeRegister(r1);
         freeRegister(r3);
@@ -321,17 +665,23 @@ condition:
         std::string r1 = lastUsedRegister.top();
         lastUsedRegister.pop();
         
+        std::string addr1 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+        std::string addr2 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
+
         $$ = $1 + $3;
         $$ += "#LESS\n";
         $$ += "GET " + r3 + "\n";
         $$ += "SUB " + r1 + "\n";
-        generatedLines += 2;
 
-        $$ += "JPOS " + std::to_string(generatedLines + 3) + "\n";
+
+        $$ += "JPOS " + addr1 + "\n";
         $$ += "INC a\n";
-        $$ += "JUMP " + std::to_string(generatedLines + 4) + "\n";
+        $$ += "JUMP " + addr2 + "\n";
+        $$ += addr1 + "\n";
         $$ += "RST a\n"; 
-        generatedLines += 4;
+        $$ += addr2 + "\n";
 
         freeRegister(r1);
         freeRegister(r3);
@@ -345,7 +695,6 @@ condition:
         $$ = $1 + $4;
         $$ += "GET " + r4 + "\n";
         $$ += "SUB " + r1 + "\n";
-        generatedLines += 2;
 
         freeRegister(r1);
         freeRegister(r4);
@@ -359,7 +708,6 @@ condition:
         $$ = $1 + $4;
         $$ += "GET " + r1 + "\n";
         $$ += "SUB " + r4 + "\n";
-        generatedLines += 2;
 
         freeRegister(r1);
         freeRegister(r4);
@@ -369,24 +717,9 @@ condition:
 value:
     num {
         int x = stoi($1);
-        std::string n = intToBinary(x);
         std::string r = takeFirstAvailableRegisterNotA();
 
-        $$ = "RST " + r + "\n";
-        generatedLines++;
-        for(int i = 0; i < n.size(); i++)
-        {
-            if(i > 0)
-            {
-                $$ += "SHL " + r + "\n";
-                generatedLines++;
-            }
-            if(n[i] == '1')
-            {
-                $$ += "INC " + r + "\n";
-                generatedLines++;
-            }
-        }
+        $$ = insertingNumber(r, x);
 
         lastUsedRegister.push(r);
     }
@@ -394,7 +727,6 @@ value:
         $$ = $1;
         $$ += "LOAD " + lastUsedRegister.top() + "\n";
         $$ += "PUT " + lastUsedRegister.top() + "\n";
-        generatedLines += 2;
     }
 ;
 
@@ -402,54 +734,40 @@ identifier:
     pidentifier { 
         std::string r = takeFirstAvailableRegisterNotA();  
         std::string varName = varPrefix + $1;
-        // TODO: Sprawdź czy zmienna istnieje
-        int varAddress = variableMap[varName];
-        std::string n = intToBinary(varAddress);
+        int varAddress = getAddress(varName);
 
-        $$ = "RST " + r + "\n";
-        generatedLines++;
-        for(int i = 0; i < n.size(); i++)
-        {
-            if(i > 0)
-            {
-                $$ += "SHL " + r + "\n";
-                generatedLines++;
-            }
-            if(n[i] == '1')
-            {
-                $$ += "INC " + r + "\n";
-                generatedLines++;
-            }
-        }  
+        $$ = insertingNumber(r, varAddress);
 
         lastUsedRegister.push(r);
         }
     | pidentifier LSPAR num RSPAR { 
         std::string r = takeFirstAvailableRegisterNotA();
         std::string varName = varPrefix + $1;
-        int varAddress = variableMap[varName];
+        int varAddress = getAddress(varName);
         int offset = stoi($3);
-        std::string n = intToBinary(varAddress + offset);
 
-        $$ = "RST " + r + "\n";
-        generatedLines++;
-        for(int i = 0; i < n.size(); i++)
-        {
-            if(i > 0)
-            {
-                $$ += "SHL " + r + "\n";
-                generatedLines++;
-            }
-            if(n[i] == '1')
-            {
-                $$ += "INC " + r + "\n";
-                generatedLines++;
-            }
-        } 
+        $$ = insertingNumber(r, varAddress + offset);
 
         lastUsedRegister.push(r);
         }
-    | pidentifier LSPAR pidentifier RSPAR 
+    | pidentifier LSPAR pidentifier RSPAR  { 
+        std::string r = takeFirstAvailableRegisterNotA();  
+        std::string tabName = varPrefix + $1;
+        int tabAddress = getAddress(tabName);
+
+        $$ = insertingNumber(r, tabAddress);
+
+        std::string varName = varPrefix + $3;
+        int varAddress = getAddress(varName);
+
+        $$ += insertingNumber("a", varAddress);
+
+        $$ += "LOAD a\n";
+        $$ += "ADD " + r + "\n";
+        $$ += "PUT " + r + "\n";
+
+        lastUsedRegister.push(r);
+        }
 ;
 
 
@@ -469,19 +787,6 @@ identifier:
 ; */
 %%
 
-std::string takeFirstAvailableRegister()
-{
-    for(int i = 0; i < 8; i++)
-        if(availableRegister[i])
-        {
-            availableRegister[i] = false;
-            std::string s(1, ('a' + i));
-            return s;
-        }
-            
-    throw "Brak wolnych rejestrów";
-}
-
 std::string takeFirstAvailableRegisterNotA()
 {
     for(int i = 1; i < 8; i++)
@@ -491,10 +796,9 @@ std::string takeFirstAvailableRegisterNotA()
             std::string s(1, ('a' + i));
             return s;
         }
-            
+    
     throw "Brak wolnych rejestrów";
 }
-
 
 void freeRegister(std::string rx)
 {
@@ -502,55 +806,49 @@ void freeRegister(std::string rx)
     availableRegister[x - 'a'] = true;
 }
 
-int countLines(std::string s)
+int getAddress(std::string var)
 {
-    return std::count(s.begin(), s.end(), '\n');
-}
-
-void printCmd(std::string cmd)
-{
-    std::cout << cmd;
-    /* generatedLines += countLines(cmd); */
+    std::map<std::string, int>::iterator it;
+    it = variableMap.find(var);
+    if(it != variableMap.end())
+    {
+        return it->second;
+    }
+    std::cout << "Próba dostępu do niezadeklarowanej zmiennej \"" << var << "\" w linii " << yylineno << std::endl;
+    throw "VariableError";
 }
 
 int yyerror(char const* s)
 {
-    printf("Error: %s at line %d\n", s, yylineno);	
+    std::cout << "Error: " << s << " at line " << yylineno << std::endl;	
     return 0;
 }
 
 int main(int argc, char const *argv[])
 {
-    // Otworzenie pliku wejściowego i wyjściowego
-    if(argc > 1) 
+
+    if(argc != 3)
     {
-        FILE* f;
-        f = fopen(argv[1], "r");
-        yyin = f;
+        std::cout << "Poprawna składnia: \n\t./kompilator <plik źródłowy> <nazwa pliku docelowego>" << std::endl;
+        return 44;
     }
+
+    // Otworzenie pliku wejściowego i wyjściowego
+    yyin = fopen(argv[1], "r");
 
     for(int i = 0; i < 8; i++)
     {
         availableRegister[i] = true;
     }
 
-    printCmd("RST a\n");
-    printCmd("RST b\n");
-    printCmd("RST c\n");
-    printCmd("RST d\n");
-    printCmd("RST e\n");
-    printCmd("RST f\n");
-    printCmd("RST g\n");
-    printCmd("RST h\n");
-    generatedLines += 8;
-
     yyparse();
-    printCmd("HALT\n");
-    /* printf("Przeczytano %d linii\n", yylineno); */
-    /* std::map<std::string, int>::iterator it = variableMap.begin();
+
+    printCmd(endResult, argv[2]);
+
+    std::map<std::string, int>::iterator it = variableMap.begin();
     while(it != variableMap.end()) {
         std::cout << "map[" << it->first << "] = " << it->second << std::endl;
         ++it;
-    } */
+    }
     return 0;
 }

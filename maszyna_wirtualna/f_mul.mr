@@ -1,40 +1,80 @@
-RST a 
-RST b
-RST c
-RST d
-READ
-JZERO 38
-PUT b
-READ 
-JZERO 38
-PUT c
-SUB b
-JZERO 19
-GET c   # Upewnij się że c < b
-PUT d 
-GET b
-PUT c
-GET d 
-PUT b
-RST d
-GET c   #19 - początek
-DEC a
-JZERO 36    
+GET b       #0
+JZERO 32    #1 Jeżeli b = 0 to zakończ
 GET c
+JPOS 6      #3 Jeżeli c != 0 to nie kończ
+RST b
+JUMP 32
+SUB b
+JZERO 14    #7 Jeżeli c <= b to przejdź do mnożenia, w p.p. zamień miejscami 
+GET b
+PUT d
+GET c 
+PUT b
+GET d       
+PUT c
+RST d
+GET c       #15 Początek pętli
+DEC a
+JZERO 29    #17 Jeżeli c <= 1 to zakończ pętlę
+GET c       #18 Sprawdź czy c jest nieparzyste
 SHR c
 SHL c
 SUB c
-JPOS 30     
-SHR c
-SHL b
-JUMP 19
-SHR c   #30 - else
-GET b
+JZERO 26
+GET b       #23 Jeżeli tak to d = d + b
 ADD d 
 PUT d
-SHL b
-JUMP 19
-GET b   #36 - koniec
+SHL b       #26 W każdym przypadku b = 2 * b, c = c / 2
+SHR c
+JUMP 15     #28 Wróć na początek pętli
+GET b       #29 Na końcu b = b + d 
 ADD d 
-WRITE   #38 - wypisz
+PUT b
+HALT        #32 Koniec
+
+
+
+RST a RST b RST c
+RST d
+RST e 
+RST f
+RST g 
+RST h 
+READ 
+PUT b 
+READ 
+PUT c
+# Wykonaj b * c
+GET b       #0
+JZERO 39    #1 Jeżeli b = 0 to zakończ
+GET c
+JZERO 39    #3 Jeżeli c = 0 to zakończ
+SUB b
+JZERO 25    #5 Jeżeli c <= b to przejdź do mnożenia, w p.p. zamień miejscami 
+GET b
+PUT d
+GET c 
+PUT b
+GET d       
+PUT c
+RST d
+# Początek pętli (19)
+GET c       #13
+DEC a
+JZERO 39    #15 Jeżeli c <= 1 to zakończ pętlę
+GET c       #16 Sprawdź czy c jest nieparzyste
+SHR c
+SHL c
+SUB c
+JZERO 36
+GET b       #21 Jeżeli tak to d = d + b
+ADD d 
+PUT d
+SHL b       #24 W każdym przypadku b = 2 * b, c = c / 2
+SHR c
+JUMP 25     #26 Wróć na początek pętli
+GET b       #27 Na końcu b = b + d 
+ADD d 
+PUT b
+WRITE 
 HALT

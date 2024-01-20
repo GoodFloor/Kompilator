@@ -1,19 +1,9 @@
+#ifndef utils
+#define  utils
+
 #include <string>
 
-std::string intToBinary(int n)
-{
-    std::string result = "";
-    while (n > 0)
-    {
-        if (n % 2 == 0)
-        {
-            result = "0" + result;
-        }
-        else
-        {
-            result = "1" + result;
-        }
-        n /= 2;    
-    }
-    return result;    
-}
+std::string insertingNumber(std::string r, int number);
+void printCmd(std::string commandBlock, std::string outputFile);
+
+#endif

@@ -1,0 +1,104 @@
+RST d
+GET b   # Wykrywanie sytuacji specjalnych
+JZERO 40
+PUT d
+RST b
+GET c 
+DEC a 
+JZERO 40
+GET d 
+PUT b 
+RST d 
+GET c 
+SUB b 
+JPOS 40
+RST e 
+GET c   # Pierwsza pętla
+SUB b
+JPOS 21
+SHL c 
+INC e   # Koniec pierwszej pętli
+JUMP 15
+SHR c 
+DEC e 
+INC d 
+GET b 
+SUB c 
+PUT b 
+GET e   # Druga pętla
+JZERO 40
+SHL d 
+DEC e 
+SHR c
+GET c   # if c <= b 
+SUB b
+JPOS 27
+INC d 
+GET b 
+SUB c 
+PUT b 
+JUMP 27 # Koniec drugiej pętli
+HALT
+# W r_d jest wynik, w r_b jest reszta
+
+
+
+
+
+
+
+RST a 
+RST b 
+RST c
+RST d
+RST e 
+RST f
+RST g 
+RST h 
+READ 
+PUT b 
+READ 
+PUT c
+GET b   # Wykrywanie sytuacji specjalnych
+JZERO 51
+PUT d
+RST b
+GET c 
+DEC a 
+JZERO 51
+GET d 
+PUT b 
+RST d 
+GET c 
+SUB b 
+JPOS 51
+RST e 
+GET c   # Pierwsza pętla
+SUB b
+JPOS 32
+SHL c 
+INC e   # Koniec pierwszej pętli
+JUMP 26
+SHR c 
+DEC e 
+INC d 
+GET b 
+SUB c 
+PUT b 
+GET e   # Druga pętla
+JZERO 51
+SHL d 
+DEC e 
+SHR c
+GET c   # if c <= b 
+SUB b
+JPOS 38
+INC d 
+GET b 
+SUB c 
+PUT b 
+JUMP 38 # Koniec drugiej pętli
+HALT
+# W r_d jest wynik, w r_b jest reszta
+
+
