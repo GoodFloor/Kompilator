@@ -1,12 +1,5 @@
 PROGRAM IS
     b
 IN
-    b := 1;
-    b := b * 2;
-    WRITE b;
-
-    WHILE b <= 64 DO
-        b := b + 2;
-        WRITE b;
-    ENDWHILE
+    b := 4 * 4;
 END

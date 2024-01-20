@@ -8,7 +8,7 @@ CXX       = g++ $(CFLAGS) $(CXXFLAGS)
 
 all: kompilator
 
-kompilator: kompilator_l.o kompilator_y.o utils.o 
+kompilator: kompilator_y.o kompilator_l.o utils.o 
 	$(CXX) -o kompilator kompilator_l.o kompilator_y.o utils.o 
 
 %.o: %.cpp
@@ -19,7 +19,7 @@ kompilator_y.hpp: kompilator_y.cpp
 kompilator_y.cpp: kompilator.y
 	bison -o kompilator_y.cpp -d kompilator.y 
 
-kompilator_l.cpp: kompilator.lex kompilator_y.hpp
+kompilator_l.cpp: kompilator.lex
 	flex -o kompilator_l.cpp $(FLEXFLAGS) kompilator.lex
 
 clean:
