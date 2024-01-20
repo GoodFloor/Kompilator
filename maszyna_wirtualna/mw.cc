@@ -39,11 +39,11 @@ void run_machine( vector< pair<int,int> > & program )
   while( program[lr].first!=HALT )	// HALT
   {
     // Debugowanie - wypisywanie rejestrów
-    cout << cCyan << lr << " ||\t";
-    for (int i = 0; i < 8; i++)
-      cout << r[i] << "\t";
-    cout << " || " << t << "\t";
-    cout << io << cReset << endl;
+    // cout << cCyan << lr << " ||\t";
+    // for (int i = 0; i < 8; i++)
+    //   cout << r[i] << "\t";
+    // cout << " || " << t << "\t";
+    // cout << io << cReset << endl;
     //
     switch( program[lr].first )
     {

@@ -23,7 +23,7 @@ kompilator_l.cpp: kompilator.lex
 	flex -o kompilator_l.cpp $(FLEXFLAGS) kompilator.lex
 
 clean:
-	rm -f kompilator_l.cpp kompilator_l.hpp kompilator_y.cpp kompilator_y.hpp *.o *.h
+	rm -f kompilator_l.cpp kompilator_l.hpp kompilator_y.cpp kompilator_y.hpp *.o
 
 cleanall: clean
 	rm -f kompilator

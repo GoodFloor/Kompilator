@@ -2,6 +2,7 @@
 #include <map>
 #include <sstream>
 #include "utils.hpp"
+#include <iostream>
 
 std::string intToBinary(unsigned long long n)
 {
@@ -60,10 +61,13 @@ std::string fillJumps(std::string instructionBlock)
     std::string result = "";
     while (getline(ss, oneLine))
     {
-        if (oneLine.substr(0, 4) == "JUMP" || oneLine.substr(0, 4) == "JPOS" || oneLine.substr(0, 5) == "JZERO")
+        if (oneLine.substr(0, 5) == "JUMP " || oneLine.substr(0, 5) == "JPOS " || oneLine.substr(0, 6) == "JZERO ")
         {
             int at = oneLine.find("@");
-            result += oneLine.substr(0, at) + std::to_string(jumpAddress[oneLine.substr(at)]) + "\n";
+            if (at > -1)
+                result += oneLine.substr(0, at) + std::to_string(jumpAddress[oneLine.substr(at)]) + "\n";
+            else 
+                result += oneLine + "\n";
         }
         else if (oneLine[0] != '@')
             result += oneLine + "\n";

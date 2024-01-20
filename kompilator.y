@@ -1,5 +1,4 @@
 %{
-    #include <stdio.h>
     #include <iostream>
     #include <map>
     #include <stack>
@@ -21,6 +20,7 @@
     unsigned long long currentVarAddress = 0;
     std::string varPrefix = "proc" + std::to_string(currentProcedureId) + "_";
     std::map<std::string, unsigned long long> variableMap;
+    std::map<std::string, bool> isArgument;
     std::map<std::string, std::string> procedureAlias;
     std::map<std::string, int> procedureAddress;
     std::map<std::string, std::string> argsAlias;
@@ -29,7 +29,7 @@
     int argId = 0;
     std::vector<std::string> argsVector;
     int jumpId = 0;
-    std::string addressPrefix = "@JUMP";
+    std::string addressPrefix = "@addr";
     std::string endResult = "";
 %}
 
@@ -83,8 +83,7 @@ program_all:
         std::string addr1 = addressPrefix + std::to_string(jumpId);
         jumpId++;
 
-        endResult = "RST a\nRST b\nRST c\nRST d\nRST e\nRST f\nRST g\nRST h\n";
-        endResult += "JUMP " + addr1 + "\n";
+        endResult = "JUMP " + addr1 + "\n";
         endResult += "# procedury\n";
         endResult += $1;
         endResult += "# main\n";
@@ -96,35 +95,46 @@ program_all:
 procedures:
     procedures PROCEDURE proc_head IS declarations IN commands END { 
         variableMap[varPrefix + "@return"] = currentVarAddress;
+        isArgument[varPrefix + $3] = false;
         currentVarAddress++;
 
         std::string r = takeFirstAvailableRegisterNotA();  
         std::string varName = varPrefix + "@return";
         unsigned long long varAddress = getAddress(varName);
 
-        $$ = "#PROCEDURE " + varPrefix + "\n" + $7;
-
+        $$ = "# " + $3 + " (" + varPrefix + ")" + "\n";
+        $$ += "@" + varPrefix + "\n";
+        $$ += $7;
         $$ += insertingNumber(r, varAddress);
+        $$ += "LOAD " + r + "\n";
+        $$ += "JUMPR a\n";
 
         currentProcedureId++;
         varPrefix = "proc" + std::to_string(currentProcedureId) + "_"; 
+        freeRegister(r);
         }
     | procedures PROCEDURE proc_head IS IN commands END { 
         variableMap[varPrefix + "@return"] = currentVarAddress;
+        isArgument[varPrefix + $3] = false;
         currentVarAddress++;
 
         std::string r = takeFirstAvailableRegisterNotA();  
         std::string varName = varPrefix + "@return";
         unsigned long long varAddress = getAddress(varName);
 
-        $$ = "#PROCEDURE " + varPrefix + "\n" + $6;
+        std::string addr1 = addressPrefix + std::to_string(jumpId);
+        jumpId++;
 
+        $$ = "# " + $3 + " (" + varPrefix + ")" + "\n";
+        $$ += "@" + varPrefix + "\n";
+        $$ += $6;
         $$ += insertingNumber(r, varAddress);
-
-        $$ += "JUMPR " + r + "\n";
+        $$ += "LOAD " + r + "\n";
+        $$ += "JUMPR a\n";
 
         currentProcedureId++;
         varPrefix = "proc" + std::to_string(currentProcedureId) + "_"; 
+        freeRegister(r);
         }
     | 
 ;
@@ -250,6 +260,7 @@ proc_head:
     pidentifier LPAR args_decl RPAR {
         procedureAlias[$1] = varPrefix;
         argId = 0;
+        $$ = $1;
     }
 ;
 
@@ -257,11 +268,11 @@ proc_call:
     pidentifier LPAR args RPAR {
         std::string procId = procedureAlias[$1];
         int procAddr = procedureAddress[procId];
-        int returnAddr = getAddress(procId + "@return");
+        unsigned long long returnAddr = getAddress(procId + "@return");
         std::string r1 = takeFirstAvailableRegisterNotA();  
         std::string r2 = takeFirstAvailableRegisterNotA();
 
-        $$ = "#CALL " + procId + "\n";
+        $$ = "# call " + procId + "\n";
 
         // Dla każdego argumentu w wywołaniu funkcji
         for(int j = 0; j < argsVector.size(); j++)
@@ -270,8 +281,8 @@ proc_call:
             targetName = argsAlias[targetName];
             std::string sourceName = argsVector[j];
 
-            int sourceAddr = getAddress(sourceName);
-            int targetAddr = getAddress(targetName);
+            unsigned long long sourceAddr = getAddress(sourceName);
+            unsigned long long targetAddr = getAddress(targetName);
 
             $$ += insertingNumber("a", sourceAddr);
             $$ += insertingNumber(r1, targetAddr);
@@ -286,9 +297,9 @@ proc_call:
         $$ += "STRK a\n";
         $$ += "ADD " + r2 + "\n";
         $$ += "STORE " + r1 + "\n";
-        $$ += "JUMP " + std::to_string(procAddr) + "\n";
+        $$ += "JUMP @" + procId + "\n";
 
-        $$ += "#END OF CALL\n";
+        $$ += "# end of call\n";
 
         freeRegister(r1);
         freeRegister(r2);
@@ -299,18 +310,22 @@ proc_call:
 declarations:
     declarations COMMA pidentifier {
         variableMap[varPrefix + $3] = currentVarAddress;
+        isArgument[varPrefix + $3] = false;
         currentVarAddress++;
     }
     | declarations COMMA pidentifier LSPAR num RSPAR {
         variableMap[varPrefix + $3] = currentVarAddress;
+        isArgument[varPrefix + $3] = false;
         currentVarAddress += stoull($5);
     }
     | pidentifier {
         variableMap[varPrefix + $1] = currentVarAddress;
+        isArgument[varPrefix + $1] = false;
         currentVarAddress++;
     }
     | pidentifier LSPAR num RSPAR {
         variableMap[varPrefix + $1] = currentVarAddress;
+        isArgument[varPrefix + $1] = false;
         currentVarAddress += stoull($3);
     }
 ;
@@ -318,6 +333,7 @@ declarations:
 args_decl:
     args_decl COMMA pidentifier {
         variableMap[varPrefix + $3] = currentVarAddress;
+        isArgument[varPrefix + $3] = true;
         currentVarAddress++;
 
         argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $3;
@@ -325,6 +341,7 @@ args_decl:
     }
     | args_decl COMMA T pidentifier {
         variableMap[varPrefix + $4] = currentVarAddress;
+        isArgument[varPrefix + $4] = true;
         currentVarAddress++;
 
         argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $4;
@@ -332,6 +349,7 @@ args_decl:
     }
     | pidentifier {
         variableMap[varPrefix + $1] = currentVarAddress;
+        isArgument[varPrefix + $1] = true;
         currentVarAddress++;
 
         argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $1;
@@ -339,6 +357,7 @@ args_decl:
     }
     | T pidentifier {
         variableMap[varPrefix + $2] = currentVarAddress;
+        isArgument[varPrefix + $2] = true;
         currentVarAddress++;
 
         argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $2;
@@ -738,6 +757,12 @@ identifier:
 
         $$ = insertingNumber(r, varAddress);
 
+        if (isArgument[varName])
+        {
+            $$ += "LOAD " + r + "\n";
+            $$ += "PUT " + r + "\n";
+        }
+
         lastUsedRegister.push(r);
         }
     | pidentifier LSPAR num RSPAR { 
@@ -746,21 +771,39 @@ identifier:
         unsigned long long varAddress = getAddress(varName);
         unsigned long long offset = stoull($3);
 
-        $$ = insertingNumber(r, varAddress + offset);
+        if (isArgument[varName])
+        {
+            $$ = insertingNumber(r, varAddress);
+            $$ += "LOAD " + r + "\n";
+            $$ += "PUT " + r + "\n";
+            $$ += insertingNumber("a", offset);
+            $$ += "ADD " + r + "\n";
+            $$ += "PUT " + r + "\n";
+        }
+        else 
+        {
+            $$ = insertingNumber(r, varAddress + offset);
+        }
 
         lastUsedRegister.push(r);
         }
     | pidentifier LSPAR pidentifier RSPAR  { 
         std::string r = takeFirstAvailableRegisterNotA();  
         std::string tabName = varPrefix + $1;
-        int tabAddress = getAddress(tabName);
+        std::string offsetName = varPrefix + $3;
+        unsigned long long tabAddress = getAddress(tabName);
+        unsigned long long offsetAddress = getAddress(offsetName);
 
         $$ = insertingNumber(r, tabAddress);
+        if (isArgument[tabName])
+        {
+            $$ += "LOAD " + r + "\n";
+            $$ += "PUT " + r + "\n";
+        }
 
-        std::string varName = varPrefix + $3;
-        unsigned long long varAddress = getAddress(varName);
-
-        $$ += insertingNumber("a", varAddress);
+        $$ += insertingNumber("a", offsetAddress);
+        if (isArgument[offsetName])
+            $$ += "LOAD a\n";
 
         $$ += "LOAD a\n";
         $$ += "ADD " + r + "\n";
@@ -769,22 +812,6 @@ identifier:
         lastUsedRegister.push(r);
         }
 ;
-
-
-
-
-
-/* line: exp1 END 	{ 
-        if(zerodiv) {
-            zerodiv = false;
-            printf("\nBłąd w linii %d! Dzielenie przez nieodwracalną liczbę!\n", yylineno-1);
-        }
-        else
-            printf("\nWynik:\t%d\n",(int)$1); 
-        printf("\n");
-    }
-    | error END	{ printf("Błąd składni w linii %d!\n",yylineno-1); printf("\n");}
-; */
 %%
 
 std::string takeFirstAvailableRegisterNotA()

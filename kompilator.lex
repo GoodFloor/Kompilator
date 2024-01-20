@@ -11,7 +11,7 @@
 %%
 \n ;
 [ \t]+ 	;
-^\#.*\n ;
+^[ \t]*\#.*\n ;
 "PROCEDURE" { return PROCEDURE; }
 "IS"        { return IS; }
 "IN"        { return IN; }
