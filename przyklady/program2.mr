@@ -1,168 +1,403 @@
-JUMP 104
-RST b	# licz 
-LOAD b
-PUT d	# &s -> r_d
+JUMP 279
+# procedury
+# licz (proc0_)
+# x := y;
+RST b
 INC b
-LOAD b	
-PUT e	# &n -> r_e
-RST a
-INC a
-INC a
-PUT f	# i=2 -> r_f
-RST a	# 1 -> h
-INC a
-PUT f
-GET e	# while i<=n
-PUT b
-LOAD b
-INC a
-SUB f
-JZERO 27	# not i<=n
-GET d	# s[i]:=1
-ADD f
-PUT b
-GET h
+SHL b
+RST c
+INC c
+SHL c
+GET c
 STORE b
-INC f	# i:=i+1
-JUMP 14 # endwhile
+# while
+RST b
+INC b
+SHL b
+LOAD b
+PUT b
+RST c
+INC c
+LOAD c
+PUT c
+LOAD c
+PUT c
+GET b
+SUB c
+JPOS 52
+# while true
+# x := y;
+RST b
+LOAD b
+PUT b
 RST a
 INC a
-INC a
-PUT f	# i=2 -> r_f
-GET e	# while i<=n
+SHL a
+LOAD a
+ADD b
 PUT b
-LOAD b
-INC a
-SUB f
-JZERO 62	# not i<=n
-GET d	# if s[i]>0
-ADD f
-PUT b
-LOAD b
-JZERO 60	# not s[i]>0
-GET f
-ADD f
-PUT g	# j=i+i -> r_g
-GET e	# while j<=n
-PUT b
-LOAD b
-INC a
-SUB g
-JZERO 60	# not j<=n
-GET d	# s[j]:=0
-ADD g
-PUT b
-RST a
+RST c
+INC c
+GET c
 STORE b
-GET g	# j:=j+i
-ADD f
-PUT g
-JUMP 45	# endwhile
-INC f	# i:=i+1
-JUMP 31	# endwhile
-RST b	# return
+# x := y;
+RST b
 INC b
 SHL b
+RST c
+INC c
+SHL c
+LOAD c
+PUT c
+RST d
+INC d
+GET c
+ADD d
+PUT c
+GET c
+STORE b
+JUMP 9
+# endwhile
+# x := y;
+RST b
+INC b
+SHL b
+RST c
+INC c
+SHL c
+GET c
+STORE b
+# while
+RST b
+INC b
 SHL b
 LOAD b
-JUMPR a	# end licz
-RST b	# wypisz
-INC b
-SHL b
-SHL b
-INC b
+PUT b
+RST c
+INC c
+LOAD c
+PUT c
+LOAD c
+PUT c
+GET b
+SUB c
+JPOS 177
+# while true
+# if
+RST b
 LOAD b
-PUT d	# &s -> r_d
-INC b
-LOAD b	
-PUT e	# &n -> r_e
+PUT b
 RST a
 INC a
-INC a
-PUT f	# i=2 -> r_f
-GET e	# while i<=n
+SHL a
+LOAD a
+ADD b
 PUT b
 LOAD b
+PUT b
+RST c
+GET b
+SUB c
+JPOS 91
 INC a
-SUB f
-JZERO 97	# not i<=n
-GET d	# if s[i]>0
-ADD f
+JUMP 92
+RST a
+JPOS 161
+# if true
+# x := y;
+RST b
+INC b
+SHL b
+INC b
+RST c
+INC c
+SHL c
+LOAD c
+PUT c
+RST d
+INC d
+SHL d
+LOAD d
+PUT d
+GET c
+ADD d
+PUT c
+GET c
+STORE b
+# while
+RST b
+INC b
+SHL b
+INC b
+LOAD b
+PUT b
+RST c
+INC c
+LOAD c
+PUT c
+LOAD c
+PUT c
+GET b
+SUB c
+JPOS 161
+# while true
+# x := y;
+RST b
+LOAD b
+PUT b
+RST a
+INC a
+SHL a
+INC a
+LOAD a
+ADD b
+PUT b
+RST c
+GET c
+STORE b
+# x := y;
+RST b
+INC b
+SHL b
+INC b
+RST c
+INC c
+SHL c
+INC c
+LOAD c
+PUT c
+RST d
+INC d
+SHL d
+LOAD d
+PUT d
+GET c
+ADD d
+PUT c
+GET c
+STORE b
+JUMP 112
+# endwhile
+# endif
+# x := y;
+RST b
+INC b
+SHL b
+RST c
+INC c
+SHL c
+LOAD c
+PUT c
+RST d
+INC d
+GET c
+ADD d
+PUT c
+GET c
+STORE b
+JUMP 60
+# endwhile
+RST b
+INC b
+SHL b
+SHL b
+LOAD b
+JUMPR a
+# wypisz (proc1_)
+# x := y;
+RST b
+INC b
+SHL b
+INC b
+SHL b
+INC b
+RST c
+INC c
+SHL c
+GET c
+STORE b
+# while
+RST b
+INC b
+SHL b
+INC b
+SHL b
+INC b
+LOAD b
+PUT b
+RST c
+INC c
+SHL c
+INC c
+SHL c
+LOAD c
+PUT c
+LOAD c
+PUT c
+GET b
+SUB c
+JPOS 272
+# while true
+# if
+RST b
+INC b
+SHL b
+SHL b
+INC b
+LOAD b
+PUT b
+RST a
+INC a
+SHL a
+INC a
+SHL a
+INC a
+LOAD a
+ADD b
 PUT b
 LOAD b
-JZERO 95	# not s[i]>0
-GET f
+PUT b
+RST c
+GET b
+SUB c
+JPOS 238
+INC a
+JUMP 239
+RST a
+JPOS 250
+# if true
+# write x;
+RST b
+INC b
+SHL b
+INC b
+SHL b
+INC b
+LOAD b
+PUT b
+GET b
 WRITE
-INC f	# i:=i+1
-JUMP 82
-RST b	# return
+# endif
+# x := y;
+RST b
+INC b
+SHL b
+INC b
+SHL b
+INC b
+RST c
+INC c
+SHL c
+INC c
+SHL c
+INC c
+LOAD c
+PUT c
+RST d
+INC d
+GET c
+ADD d
+PUT c
+GET c
+STORE b
+JUMP 194
+# endwhile
+RST b
 INC b
 SHL b
 SHL b
 SHL b
 LOAD b
-JUMPR a	# end wypisz
-RST b	# program
+JUMPR a
+# main
+# x := y;
+RST b
 INC b
 SHL b
 SHL b
 SHL b
 INC b
-RST a	# 99
-INC a
-SHL a
-INC a
-SHL a
-SHL a
-SHL a
-SHL a
-INC a
-SHL a
-INC a
-STORE b	# n:=99
-RST c	# call licz
-GET b
-INC a
-STORE c
+RST c
 INC c
-DEC a
-STORE c
+SHL c
+INC c
 SHL c
 SHL c
-RST a	# 4
+SHL c
+SHL c
+INC c
+SHL c
+INC c
+GET c
+STORE b
+# call proc0_
+RST a
 INC a
 SHL a
 SHL a
-STRK d
-ADD d
-STORE c
-JUMP 1	# end call licz
-RST b	# call wypisz
+INC a
+SHL a
+RST b
+STORE b
+RST a
+INC a
+SHL a
+SHL a
+SHL a
+INC a
+RST b
+INC b
+STORE b
+RST b
+INC b
+SHL b
+SHL b
+RST c
+INC c
+SHL c
+SHL c
+STRK a
+ADD c
+STORE b
+JUMP 1
+# end of call
+# call proc1_
+RST a
+INC a
+SHL a
+SHL a
+INC a
+SHL a
+RST b
+INC b
+SHL b
+SHL b
+INC b
+STORE b
+RST a
+INC a
+SHL a
+SHL a
+SHL a
+INC a
+RST b
+INC b
+SHL b
+INC b
+SHL b
+STORE b
+RST b
 INC b
 SHL b
 SHL b
 SHL b
-INC b
-RST c	
+RST c
 INC c
 SHL c
 SHL c
-INC c
-GET b
-INC a
-STORE c
-INC c
-DEC a
-STORE c
-INC c
-INC c
-RST a	# 4
-INC a
-SHL a
-SHL a
-STRK d
-ADD d
-STORE c
-JUMP 68	# end call wypisz
+STRK a
+ADD c
+STORE b
+JUMP 183
+# end of call
 HALT
-

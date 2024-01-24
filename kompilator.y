@@ -102,7 +102,8 @@ procedures:
         std::string varName = varPrefix + "@return";
         unsigned long long varAddress = getAddress(varName);
 
-        $$ = "# " + $3 + " (" + varPrefix + ")" + "\n";
+        $$ = $1;
+        $$ += "# " + $3 + " (" + varPrefix + ")" + "\n";
         $$ += "@" + varPrefix + "\n";
         $$ += $7;
         $$ += insertingNumber(r, varAddress);
@@ -125,7 +126,8 @@ procedures:
         std::string addr1 = addressPrefix + std::to_string(jumpId);
         jumpId++;
 
-        $$ = "# " + $3 + " (" + varPrefix + ")" + "\n";
+        $$ = $1;
+        $$ += "# " + $3 + " (" + varPrefix + ")" + "\n";
         $$ += "@" + varPrefix + "\n";
         $$ += $6;
         $$ += insertingNumber(r, varAddress);
@@ -285,6 +287,8 @@ proc_call:
             unsigned long long targetAddr = getAddress(targetName);
 
             $$ += insertingNumber("a", sourceAddr);
+            if (isArgument[sourceName])
+                $$ += "LOAD a\n";
             $$ += insertingNumber(r1, targetAddr);
             $$ += "STORE " + r1 + "\n";
         }

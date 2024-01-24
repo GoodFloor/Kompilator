@@ -1,37 +1,197 @@
-# prosta translacja z użyciem pamięci
-# n -> P0, p -> P1
-READ    # READ n
+JUMP 1
+# procedury
+# main
+# read x;
 RST b
+READ
 STORE b
-RST b   # p := n / 2
-LOAD b
-SHR a
-SHL a   # p := 2 * p
+# repeat
+# x := y;
 RST b
 INC b
-STORE b
-RST b   # IF n > p THEN
-LOAD b
+RST c
+LOAD c
 PUT c
-RST b
-INC b
-LOAD b
-PUT d
+RST d
+INC d
+SHL d
+# dzielenie
+RST e
+GET c
+JZERO 52
+PUT e
+RST c
+GET d
+DEC a
+JZERO 52
+GET e
+PUT c
+RST e
+GET d
+SUB c
+JPOS 52
+RST f
+GET d
+SUB c
+JPOS 33
+SHL d
+INC f
+JUMP 27
+SHR d
+DEC f
+INC e
 GET c
 SUB d
-JZERO 24 # JUMP ELSE
-RST a   # THEN
-INC a
-WRITE
-JUMP 26 # JUMP ENDIF
-RST a   # ELSE 
-WRITE
-RST b   # n := n / 2
-LOAD b
-SHR a
-RST b
+PUT c
+GET f
+JZERO 52
+SHL e
+DEC f
+SHR d
+GET d
+SUB c
+JPOS 39
+INC e
+GET c
+SUB d
+PUT c
+JUMP 39
+GET e
 STORE b
-RST b   # UNTIL n = 0
+# x := y;
+RST b
+INC b
+RST c
+INC c
+SHL c
+RST d
+INC d
+LOAD d
+PUT d
+# mnożenie
+GET c
+JZERO 95
+GET d
+JPOS 69
+RST c
+JUMP 95
+SUB c
+JZERO 77
+GET c
+PUT e
+GET d
+PUT c
+GET e
+PUT d
+RST e
+GET d
+DEC a
+JZERO 92
+GET d
+SHR d
+SHL d
+SUB d
+JZERO 89
+GET c
+ADD e
+PUT e
+SHL c
+SHR d
+JUMP 78
+GET c
+ADD e
+PUT c
+GET c
+STORE b
+# if-else
+RST b
 LOAD b
-JPOS 3
+PUT b
+RST c
+INC c
+LOAD c
+PUT c
+GET b
+SUB c
+JPOS 109
+INC a
+JUMP 110
+RST a
+JPOS 116
+# if true
+# write x;
+RST b
+INC b
+GET b
+WRITE
+JUMP 119
+# if false
+# write x;
+RST b
+GET b
+WRITE
+# endif
+# x := y;
+RST b
+RST c
+LOAD c
+PUT c
+RST d
+INC d
+SHL d
+# dzielenie
+RST e
+GET c
+JZERO 166
+PUT e
+RST c
+GET d
+DEC a
+JZERO 166
+GET e
+PUT c
+RST e
+GET d
+SUB c
+JPOS 166
+RST f
+GET d
+SUB c
+JPOS 147
+SHL d
+INC f
+JUMP 141
+SHR d
+DEC f
+INC e
+GET c
+SUB d
+PUT c
+GET f
+JZERO 166
+SHL e
+DEC f
+SHR d
+GET d
+SUB c
+JPOS 153
+INC e
+GET c
+SUB d
+PUT c
+JUMP 153
+GET e
+STORE b
+RST b
+LOAD b
+PUT b
+RST c
+GET b
+SUB c
+PUT d
+GET c
+SUB b
+ADD d
+# until
+JPOS 4
 HALT

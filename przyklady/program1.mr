@@ -1,129 +1,348 @@
-JUMP 37
-RST b	# gcd
-LOAD b	# x:=a
-LOAD a
-PUT c
+JUMP 159
+# procedury
+# gcd (proc0_)
+# x := y;
+RST b
 INC b
-LOAD b	# y:=b
-LOAD a
-PUT d
-GET d	# while
-JZERO 29	# not y>0
-GET c	# if x>=y
+SHL b
+INC b
+RST c
+LOAD c
+PUT c
+LOAD c
+PUT c
+GET c
+STORE b
+# x := y;
+RST b
+INC b
+SHL b
+SHL b
+RST c
+INC c
+LOAD c
+PUT c
+LOAD c
+PUT c
+GET c
+STORE b
+# while
+RST b
+INC b
+SHL b
+SHL b
+LOAD b
+PUT b
+RST c
+GET b
+SUB c
+JPOS 36
 INC a
-SUB d
-JZERO 19 
-GET c	# then
+JUMP 37
+RST a
+JPOS 139
+# while true
+# if-else
+RST b
+INC b
+SHL b
+INC b
+LOAD b
+PUT b
+RST c
+INC c
+SHL c
+SHL c
+LOAD c
+PUT c
+GET c
+SUB b
+JPOS 75
+# if true
+# x := y;
+RST b
+INC b
+SHL b
+INC b
+RST c
+INC c
+SHL c
+INC c
+LOAD c
+PUT c
+RST d
+INC d
+SHL d
+SHL d
+LOAD d
+PUT d
+GET c
 SUB d
 PUT c
-JUMP 28
-GET c	# else
+GET c
+STORE b
+JUMP 138
+# if false
+# x := y;
+RST b
+INC b
+SHL b
+INC b
+RST c
+INC c
+SHL c
+INC c
+LOAD c
+PUT c
+RST d
+INC d
+SHL d
+SHL d
+LOAD d
+PUT d
+GET c
 ADD d
 PUT c
 GET c
-SUB d
+STORE b
+# x := y;
+RST b
+INC b
+SHL b
+SHL b
+RST c
+INC c
+SHL c
+INC c
+LOAD c
+PUT c
+RST d
+INC d
+SHL d
+SHL d
+LOAD d
 PUT d
 GET c
 SUB d
 PUT c
-JUMP 9	# endwhile
-INC b
-LOAD b
-PUT e
 GET c
-STORE e
-INC b	# return
-LOAD b
-JUMPR a	# end gcd
-RST b	# program
-INC b
-SHL b
-SHL b
-READ
 STORE b
-INC b
-READ
-STORE b
-INC b
-READ
-STORE b
-INC b
-READ 
-STORE b
-RST a	# call gcd(a,b,x)
-INC a	
-SHL a
-SHL a
+# x := y;
 RST b
-STORE b
-INC a
-INC b
-STORE b	
-INC a
-INC a
-INC a
-INC b
-STORE b
-INC b	# return set
-RST a
-INC a
-SHL a
-SHL a
-STRK c
-ADD c
-STORE b
-JUMP 1	# end call
-RST a	# call gcd(c,d,y)
-INC a	
-SHL a
-INC a
-SHL a
-RST b
-STORE b
-INC a
-INC b
-STORE b	
-INC a
-INC a
-INC b
-STORE b
-INC b	# return set
-RST a
-INC a
-SHL a
-SHL a
-STRK c
-ADD c
-STORE b
-JUMP 1	# end call
-RST a	# call gcd(x,y,z)
-INC a	
-SHL a
-SHL a
-SHL a
-RST b
-STORE b
-INC a
-INC b
-STORE b	
-INC a
-INC b
-STORE b
-INC b	# return set
-RST a
-INC a
-SHL a
-SHL a
-STRK c
-ADD c
-STORE b
-JUMP 1	# end call
-RST b	# write z
 INC b
 SHL b
-SHL b
+INC b
+RST c
+INC c
+SHL c
+INC c
+LOAD c
+PUT c
+RST d
+INC d
+SHL d
+SHL d
+LOAD d
+PUT d
+GET c
+SUB d
+PUT c
+GET c
+STORE b
+# endif
+JUMP 24
+# endwhile
+# x := y;
+RST b
 INC b
 SHL b
 LOAD b
+PUT b
+RST c
+INC c
+SHL c
+INC c
+LOAD c
+PUT c
+GET c
+STORE b
+RST b
+INC b
+SHL b
+SHL b
+INC b
+LOAD b
+JUMPR a
+# main
+# read x;
+RST b
+INC b
+SHL b
+INC b
+SHL b
+READ
+STORE b
+# read x;
+RST b
+INC b
+SHL b
+INC b
+SHL b
+INC b
+READ
+STORE b
+# read x;
+RST b
+INC b
+SHL b
+SHL b
+SHL b
+READ
+STORE b
+# read x;
+RST b
+INC b
+SHL b
+SHL b
+SHL b
+INC b
+READ
+STORE b
+# call proc0_
+RST a
+INC a
+SHL a
+INC a
+SHL a
+RST b
+STORE b
+RST a
+INC a
+SHL a
+INC a
+SHL a
+INC a
+RST b
+INC b
+STORE b
+RST a
+INC a
+SHL a
+SHL a
+INC a
+SHL a
+RST b
+INC b
+SHL b
+STORE b
+RST b
+INC b
+SHL b
+SHL b
+INC b
+RST c
+INC c
+SHL c
+SHL c
+STRK a
+ADD c
+STORE b
+JUMP 1
+# end of call
+# call proc0_
+RST a
+INC a
+SHL a
+SHL a
+SHL a
+RST b
+STORE b
+RST a
+INC a
+SHL a
+SHL a
+SHL a
+INC a
+RST b
+INC b
+STORE b
+RST a
+INC a
+SHL a
+SHL a
+INC a
+SHL a
+INC a
+RST b
+INC b
+SHL b
+STORE b
+RST b
+INC b
+SHL b
+SHL b
+INC b
+RST c
+INC c
+SHL c
+SHL c
+STRK a
+ADD c
+STORE b
+JUMP 1
+# end of call
+# call proc0_
+RST a
+INC a
+SHL a
+SHL a
+INC a
+SHL a
+RST b
+STORE b
+RST a
+INC a
+SHL a
+SHL a
+INC a
+SHL a
+INC a
+RST b
+INC b
+STORE b
+RST a
+INC a
+SHL a
+INC a
+SHL a
+SHL a
+RST b
+INC b
+SHL b
+STORE b
+RST b
+INC b
+SHL b
+SHL b
+INC b
+RST c
+INC c
+SHL c
+SHL c
+STRK a
+ADD c
+STORE b
+JUMP 1
+# end of call
+# write x;
+RST b
+INC b
+SHL b
+INC b
+SHL b
+SHL b
+LOAD b
+PUT b
+GET b
 WRITE
 HALT

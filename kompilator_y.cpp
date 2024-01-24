@@ -572,11 +572,11 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,    82,    82,    96,   116,   139,   143,   147,   154,   157,
-     163,   176,   194,   206,   222,   232,   235,   246,   260,   268,
-     311,   316,   321,   326,   334,   342,   350,   358,   369,   374,
-     382,   383,   394,   405,   467,   536,   608,   626,   656,   681,
-     708,   721,   737,   745,   753,   768,   790
+       0,    82,    82,    96,   117,   141,   145,   149,   156,   159,
+     165,   178,   196,   208,   224,   234,   237,   248,   262,   270,
+     315,   320,   325,   330,   338,   346,   354,   362,   373,   378,
+     386,   387,   398,   409,   471,   540,   612,   630,   660,   685,
+     712,   725,   741,   749,   757,   772,   794
 };
 #endif
 
@@ -1516,7 +1516,8 @@ yyreduce:
         std::string varName = varPrefix + "@return";
         unsigned long long varAddress = getAddress(varName);
 
-        yyval = "# " + yyvsp[-5] + " (" + varPrefix + ")" + "\n";
+        yyval = yyvsp[-7];
+        yyval += "# " + yyvsp[-5] + " (" + varPrefix + ")" + "\n";
         yyval += "@" + varPrefix + "\n";
         yyval += yyvsp[-1];
         yyval += insertingNumber(r, varAddress);
@@ -1527,11 +1528,11 @@ yyreduce:
         varPrefix = "proc" + std::to_string(currentProcedureId) + "_"; 
         freeRegister(r);
         }
-#line 1531 "kompilator_y.cpp"
+#line 1532 "kompilator_y.cpp"
     break;
 
   case 4: /* procedures: procedures PROCEDURE proc_head IS IN commands END  */
-#line 116 "kompilator.y"
+#line 117 "kompilator.y"
                                                         { 
         variableMap[varPrefix + "@return"] = currentVarAddress;
         isArgument[varPrefix + yyvsp[-4]] = false;
@@ -1544,7 +1545,8 @@ yyreduce:
         std::string addr1 = addressPrefix + std::to_string(jumpId);
         jumpId++;
 
-        yyval = "# " + yyvsp[-4] + " (" + varPrefix + ")" + "\n";
+        yyval = yyvsp[-6];
+        yyval += "# " + yyvsp[-4] + " (" + varPrefix + ")" + "\n";
         yyval += "@" + varPrefix + "\n";
         yyval += yyvsp[-1];
         yyval += insertingNumber(r, varAddress);
@@ -1555,45 +1557,45 @@ yyreduce:
         varPrefix = "proc" + std::to_string(currentProcedureId) + "_"; 
         freeRegister(r);
         }
-#line 1559 "kompilator_y.cpp"
+#line 1561 "kompilator_y.cpp"
     break;
 
   case 6: /* main: PROGRAM IS declarations IN commands END  */
-#line 143 "kompilator.y"
+#line 145 "kompilator.y"
                                             {
         yyval = yyvsp[-1];
         yyval += "HALT\n";
     }
-#line 1568 "kompilator_y.cpp"
+#line 1570 "kompilator_y.cpp"
     break;
 
   case 7: /* main: PROGRAM IS IN commands END  */
-#line 147 "kompilator.y"
+#line 149 "kompilator.y"
                                  {
         yyval = yyvsp[-1];
         yyval += "HALT\n";
     }
-#line 1577 "kompilator_y.cpp"
+#line 1579 "kompilator_y.cpp"
     break;
 
   case 8: /* commands: commands command  */
-#line 154 "kompilator.y"
+#line 156 "kompilator.y"
                      {
         yyval = yyvsp[-1] + yyvsp[0];
     }
-#line 1585 "kompilator_y.cpp"
+#line 1587 "kompilator_y.cpp"
     break;
 
   case 9: /* commands: command  */
-#line 157 "kompilator.y"
+#line 159 "kompilator.y"
               {
         yyval = yyvsp[0];
     }
-#line 1593 "kompilator_y.cpp"
+#line 1595 "kompilator_y.cpp"
     break;
 
   case 10: /* command: identifier COLON EQUAL expression SEMICOLON  */
-#line 163 "kompilator.y"
+#line 165 "kompilator.y"
                                                 {
         std::string r4 = lastUsedRegister.top();
         lastUsedRegister.pop();
@@ -1607,11 +1609,11 @@ yyreduce:
         yyval += "GET " + r4 + "\n";
         yyval += "STORE " + r1 + "\n";
     }
-#line 1611 "kompilator_y.cpp"
+#line 1613 "kompilator_y.cpp"
     break;
 
   case 11: /* command: IF condition THEN commands ELSE commands ENDIF  */
-#line 176 "kompilator.y"
+#line 178 "kompilator.y"
                                                      {
         std::string addr1 = addressPrefix + std::to_string(jumpId);
         jumpId++;
@@ -1630,11 +1632,11 @@ yyreduce:
         yyval += addr2 + "\n";
         yyval += "# endif\n";
     }
-#line 1634 "kompilator_y.cpp"
+#line 1636 "kompilator_y.cpp"
     break;
 
   case 12: /* command: IF condition THEN commands ENDIF  */
-#line 194 "kompilator.y"
+#line 196 "kompilator.y"
                                        {
         std::string addr1 = addressPrefix + std::to_string(jumpId);
         jumpId++;
@@ -1647,11 +1649,11 @@ yyreduce:
         yyval += addr1 + "\n";
         yyval += "# endif\n";
     }
-#line 1651 "kompilator_y.cpp"
+#line 1653 "kompilator_y.cpp"
     break;
 
   case 13: /* command: WHILE condition DO commands ENDWHILE  */
-#line 206 "kompilator.y"
+#line 208 "kompilator.y"
                                            {
         std::string addr1 = addressPrefix + std::to_string(jumpId);
         jumpId++;
@@ -1668,11 +1670,11 @@ yyreduce:
         yyval += addr1 + "\n";
         yyval += "# endwhile\n";
     }
-#line 1672 "kompilator_y.cpp"
+#line 1674 "kompilator_y.cpp"
     break;
 
   case 14: /* command: REPEAT commands UNTIL condition SEMICOLON  */
-#line 222 "kompilator.y"
+#line 224 "kompilator.y"
                                                 {
         std::string addr1 = addressPrefix + std::to_string(jumpId);
         jumpId++;
@@ -1683,19 +1685,19 @@ yyreduce:
         yyval += "# until\n";
         yyval += "JPOS " + addr1 + "\n";
     }
-#line 1687 "kompilator_y.cpp"
+#line 1689 "kompilator_y.cpp"
     break;
 
   case 15: /* command: proc_call SEMICOLON  */
-#line 232 "kompilator.y"
+#line 234 "kompilator.y"
                           {
         yyval = yyvsp[-1];
     }
-#line 1695 "kompilator_y.cpp"
+#line 1697 "kompilator_y.cpp"
     break;
 
   case 16: /* command: READ identifier SEMICOLON  */
-#line 235 "kompilator.y"
+#line 237 "kompilator.y"
                                 {
         std::string r = lastUsedRegister.top();
 
@@ -1707,11 +1709,11 @@ yyreduce:
         freeRegister(r);
         lastUsedRegister.pop();
     }
-#line 1711 "kompilator_y.cpp"
+#line 1713 "kompilator_y.cpp"
     break;
 
   case 17: /* command: WRITE value SEMICOLON  */
-#line 246 "kompilator.y"
+#line 248 "kompilator.y"
                             {
         std::string r = lastUsedRegister.top();
 
@@ -1723,21 +1725,21 @@ yyreduce:
         freeRegister(r);
         lastUsedRegister.pop();
     }
-#line 1727 "kompilator_y.cpp"
+#line 1729 "kompilator_y.cpp"
     break;
 
   case 18: /* proc_head: pidentifier LPAR args_decl RPAR  */
-#line 260 "kompilator.y"
+#line 262 "kompilator.y"
                                     {
         procedureAlias[yyvsp[-3]] = varPrefix;
         argId = 0;
         yyval = yyvsp[-3];
     }
-#line 1737 "kompilator_y.cpp"
+#line 1739 "kompilator_y.cpp"
     break;
 
   case 19: /* proc_call: pidentifier LPAR args RPAR  */
-#line 268 "kompilator.y"
+#line 270 "kompilator.y"
                                {
         std::string procId = procedureAlias[yyvsp[-3]];
         int procAddr = procedureAddress[procId];
@@ -1758,6 +1760,8 @@ yyreduce:
             unsigned long long targetAddr = getAddress(targetName);
 
             yyval += insertingNumber("a", sourceAddr);
+            if (isArgument[sourceName])
+                yyval += "LOAD a\n";
             yyval += insertingNumber(r1, targetAddr);
             yyval += "STORE " + r1 + "\n";
         }
@@ -1778,51 +1782,51 @@ yyreduce:
         freeRegister(r2);
         argsVector.clear();
     }
-#line 1782 "kompilator_y.cpp"
+#line 1786 "kompilator_y.cpp"
     break;
 
   case 20: /* declarations: declarations COMMA pidentifier  */
-#line 311 "kompilator.y"
+#line 315 "kompilator.y"
                                    {
         variableMap[varPrefix + yyvsp[0]] = currentVarAddress;
         isArgument[varPrefix + yyvsp[0]] = false;
         currentVarAddress++;
     }
-#line 1792 "kompilator_y.cpp"
+#line 1796 "kompilator_y.cpp"
     break;
 
   case 21: /* declarations: declarations COMMA pidentifier LSPAR num RSPAR  */
-#line 316 "kompilator.y"
+#line 320 "kompilator.y"
                                                      {
         variableMap[varPrefix + yyvsp[-3]] = currentVarAddress;
         isArgument[varPrefix + yyvsp[-3]] = false;
         currentVarAddress += stoull(yyvsp[-1]);
     }
-#line 1802 "kompilator_y.cpp"
+#line 1806 "kompilator_y.cpp"
     break;
 
   case 22: /* declarations: pidentifier  */
-#line 321 "kompilator.y"
+#line 325 "kompilator.y"
                   {
         variableMap[varPrefix + yyvsp[0]] = currentVarAddress;
         isArgument[varPrefix + yyvsp[0]] = false;
         currentVarAddress++;
     }
-#line 1812 "kompilator_y.cpp"
+#line 1816 "kompilator_y.cpp"
     break;
 
   case 23: /* declarations: pidentifier LSPAR num RSPAR  */
-#line 326 "kompilator.y"
+#line 330 "kompilator.y"
                                   {
         variableMap[varPrefix + yyvsp[-3]] = currentVarAddress;
         isArgument[varPrefix + yyvsp[-3]] = false;
         currentVarAddress += stoull(yyvsp[-1]);
     }
-#line 1822 "kompilator_y.cpp"
+#line 1826 "kompilator_y.cpp"
     break;
 
   case 24: /* args_decl: args_decl COMMA pidentifier  */
-#line 334 "kompilator.y"
+#line 338 "kompilator.y"
                                 {
         variableMap[varPrefix + yyvsp[0]] = currentVarAddress;
         isArgument[varPrefix + yyvsp[0]] = true;
@@ -1831,11 +1835,11 @@ yyreduce:
         argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + yyvsp[0];
         argId++;
     }
-#line 1835 "kompilator_y.cpp"
+#line 1839 "kompilator_y.cpp"
     break;
 
   case 25: /* args_decl: args_decl COMMA T pidentifier  */
-#line 342 "kompilator.y"
+#line 346 "kompilator.y"
                                     {
         variableMap[varPrefix + yyvsp[0]] = currentVarAddress;
         isArgument[varPrefix + yyvsp[0]] = true;
@@ -1844,11 +1848,11 @@ yyreduce:
         argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + yyvsp[0];
         argId++;
     }
-#line 1848 "kompilator_y.cpp"
+#line 1852 "kompilator_y.cpp"
     break;
 
   case 26: /* args_decl: pidentifier  */
-#line 350 "kompilator.y"
+#line 354 "kompilator.y"
                   {
         variableMap[varPrefix + yyvsp[0]] = currentVarAddress;
         isArgument[varPrefix + yyvsp[0]] = true;
@@ -1857,11 +1861,11 @@ yyreduce:
         argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + yyvsp[0];
         argId++;
     }
-#line 1861 "kompilator_y.cpp"
+#line 1865 "kompilator_y.cpp"
     break;
 
   case 27: /* args_decl: T pidentifier  */
-#line 358 "kompilator.y"
+#line 362 "kompilator.y"
                     {
         variableMap[varPrefix + yyvsp[0]] = currentVarAddress;
         isArgument[varPrefix + yyvsp[0]] = true;
@@ -1870,31 +1874,31 @@ yyreduce:
         argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + yyvsp[0];
         argId++;
     }
-#line 1874 "kompilator_y.cpp"
+#line 1878 "kompilator_y.cpp"
     break;
 
   case 28: /* args: args COMMA pidentifier  */
-#line 369 "kompilator.y"
+#line 373 "kompilator.y"
                            {
         argsVector.push_back(varPrefix + yyvsp[0]);
         // std::cout << argId << $3 << std::endl;
         // argId++;
     }
-#line 1884 "kompilator_y.cpp"
+#line 1888 "kompilator_y.cpp"
     break;
 
   case 29: /* args: pidentifier  */
-#line 374 "kompilator.y"
+#line 378 "kompilator.y"
                   {
         argsVector.push_back(varPrefix + yyvsp[0]);
         // std::cout << argId << $1 << std::endl;
         // argId++;
     }
-#line 1894 "kompilator_y.cpp"
+#line 1898 "kompilator_y.cpp"
     break;
 
   case 31: /* expression: value PLUS value  */
-#line 383 "kompilator.y"
+#line 387 "kompilator.y"
                        {
         std::string r3 = lastUsedRegister.top();
         lastUsedRegister.pop();
@@ -1906,11 +1910,11 @@ yyreduce:
         yyval += "ADD " + r3 + "\n";
         yyval += "PUT " + r1 + "\n";
     }
-#line 1910 "kompilator_y.cpp"
+#line 1914 "kompilator_y.cpp"
     break;
 
   case 32: /* expression: value MINUS value  */
-#line 394 "kompilator.y"
+#line 398 "kompilator.y"
                         {
         std::string r3 = lastUsedRegister.top();
         lastUsedRegister.pop();
@@ -1922,11 +1926,11 @@ yyreduce:
         yyval += "SUB " + r3 + "\n";
         yyval += "PUT " + r1 + "\n";
     }
-#line 1926 "kompilator_y.cpp"
+#line 1930 "kompilator_y.cpp"
     break;
 
   case 33: /* expression: value ASTERISK value  */
-#line 405 "kompilator.y"
+#line 409 "kompilator.y"
                            {
         std::string c = lastUsedRegister.top();
         lastUsedRegister.pop();
@@ -1989,11 +1993,11 @@ yyreduce:
         yyval += "PUT " + b + "\n";
         yyval += line32 + "\n";
     }
-#line 1993 "kompilator_y.cpp"
+#line 1997 "kompilator_y.cpp"
     break;
 
   case 34: /* expression: value SLASH value  */
-#line 467 "kompilator.y"
+#line 471 "kompilator.y"
                         {
         std::string c = lastUsedRegister.top();
         lastUsedRegister.pop();
@@ -2063,11 +2067,11 @@ yyreduce:
         freeRegister(c);
         freeRegister(e);
     }
-#line 2067 "kompilator_y.cpp"
+#line 2071 "kompilator_y.cpp"
     break;
 
   case 35: /* expression: value PERCENT value  */
-#line 536 "kompilator.y"
+#line 540 "kompilator.y"
                           {
         std::string c = lastUsedRegister.top();
         lastUsedRegister.pop();
@@ -2137,11 +2141,11 @@ yyreduce:
         freeRegister(d);
         freeRegister(e);
     }
-#line 2141 "kompilator_y.cpp"
+#line 2145 "kompilator_y.cpp"
     break;
 
   case 36: /* condition: value EQUAL value  */
-#line 608 "kompilator.y"
+#line 612 "kompilator.y"
                       {
         std::string r3 = lastUsedRegister.top();
         lastUsedRegister.pop();
@@ -2160,11 +2164,11 @@ yyreduce:
         yyval += "SUB " + r1 + "\n";
         yyval += "ADD " + rt + "\n";
     }
-#line 2164 "kompilator_y.cpp"
+#line 2168 "kompilator_y.cpp"
     break;
 
   case 37: /* condition: value NEGATION EQUAL value  */
-#line 626 "kompilator.y"
+#line 630 "kompilator.y"
                                  {
         std::string r4 = lastUsedRegister.top();
         lastUsedRegister.pop();
@@ -2195,11 +2199,11 @@ yyreduce:
         yyval += "RST a\n"; 
         yyval += addr2 + "\n";
     }
-#line 2199 "kompilator_y.cpp"
+#line 2203 "kompilator_y.cpp"
     break;
 
   case 38: /* condition: value MORE value  */
-#line 656 "kompilator.y"
+#line 660 "kompilator.y"
                        {
         std::string r3 = lastUsedRegister.top();
         lastUsedRegister.pop();
@@ -2225,11 +2229,11 @@ yyreduce:
         freeRegister(r1);
         freeRegister(r3);
     }
-#line 2229 "kompilator_y.cpp"
+#line 2233 "kompilator_y.cpp"
     break;
 
   case 39: /* condition: value LESS value  */
-#line 681 "kompilator.y"
+#line 685 "kompilator.y"
                        {
         std::string r3 = lastUsedRegister.top();
         lastUsedRegister.pop();
@@ -2257,11 +2261,11 @@ yyreduce:
         freeRegister(r1);
         freeRegister(r3);
     }
-#line 2261 "kompilator_y.cpp"
+#line 2265 "kompilator_y.cpp"
     break;
 
   case 40: /* condition: value MORE EQUAL value  */
-#line 708 "kompilator.y"
+#line 712 "kompilator.y"
                              {
         std::string r4 = lastUsedRegister.top();
         lastUsedRegister.pop();
@@ -2275,11 +2279,11 @@ yyreduce:
         freeRegister(r1);
         freeRegister(r4);
     }
-#line 2279 "kompilator_y.cpp"
+#line 2283 "kompilator_y.cpp"
     break;
 
   case 41: /* condition: value LESS EQUAL value  */
-#line 721 "kompilator.y"
+#line 725 "kompilator.y"
                              {
         std::string r4 = lastUsedRegister.top();
         lastUsedRegister.pop();
@@ -2293,11 +2297,11 @@ yyreduce:
         freeRegister(r1);
         freeRegister(r4);
     }
-#line 2297 "kompilator_y.cpp"
+#line 2301 "kompilator_y.cpp"
     break;
 
   case 42: /* value: num  */
-#line 737 "kompilator.y"
+#line 741 "kompilator.y"
         {
         unsigned long long x = stoull(yyvsp[0]);
         std::string r = takeFirstAvailableRegisterNotA();
@@ -2306,21 +2310,21 @@ yyreduce:
 
         lastUsedRegister.push(r);
     }
-#line 2310 "kompilator_y.cpp"
+#line 2314 "kompilator_y.cpp"
     break;
 
   case 43: /* value: identifier  */
-#line 745 "kompilator.y"
+#line 749 "kompilator.y"
                  {
         yyval = yyvsp[0];
         yyval += "LOAD " + lastUsedRegister.top() + "\n";
         yyval += "PUT " + lastUsedRegister.top() + "\n";
     }
-#line 2320 "kompilator_y.cpp"
+#line 2324 "kompilator_y.cpp"
     break;
 
   case 44: /* identifier: pidentifier  */
-#line 753 "kompilator.y"
+#line 757 "kompilator.y"
                 { 
         std::string r = takeFirstAvailableRegisterNotA();  
         std::string varName = varPrefix + yyvsp[0];
@@ -2336,11 +2340,11 @@ yyreduce:
 
         lastUsedRegister.push(r);
         }
-#line 2340 "kompilator_y.cpp"
+#line 2344 "kompilator_y.cpp"
     break;
 
   case 45: /* identifier: pidentifier LSPAR num RSPAR  */
-#line 768 "kompilator.y"
+#line 772 "kompilator.y"
                                   { 
         std::string r = takeFirstAvailableRegisterNotA();
         std::string varName = varPrefix + yyvsp[-3];
@@ -2363,11 +2367,11 @@ yyreduce:
 
         lastUsedRegister.push(r);
         }
-#line 2367 "kompilator_y.cpp"
+#line 2371 "kompilator_y.cpp"
     break;
 
   case 46: /* identifier: pidentifier LSPAR pidentifier RSPAR  */
-#line 790 "kompilator.y"
+#line 794 "kompilator.y"
                                            { 
         std::string r = takeFirstAvailableRegisterNotA();  
         std::string tabName = varPrefix + yyvsp[-3];
@@ -2392,11 +2396,11 @@ yyreduce:
 
         lastUsedRegister.push(r);
         }
-#line 2396 "kompilator_y.cpp"
+#line 2400 "kompilator_y.cpp"
     break;
 
 
-#line 2400 "kompilator_y.cpp"
+#line 2404 "kompilator_y.cpp"
 
       default: break;
     }
@@ -2620,7 +2624,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 815 "kompilator.y"
+#line 819 "kompilator.y"
 
 
 std::string takeFirstAvailableRegisterNotA()

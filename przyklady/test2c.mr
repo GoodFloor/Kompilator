@@ -1,0 +1,154 @@
+JUMP 106
+# procedury
+# test (proc0_)
+# x := y;
+RST b
+INC b
+SHL b
+RST c
+GET c
+STORE b
+# while
+RST b
+INC b
+SHL b
+LOAD b
+PUT b
+RST c
+INC c
+SHL c
+SHL c
+INC c
+#LESS
+GET c
+SUB b
+JPOS 22
+INC a
+JUMP 23
+RST a
+JPOS 91
+# while true
+# if
+RST b
+INC b
+SHL b
+LOAD b
+PUT b
+RST c
+GET b
+SUB c
+PUT d
+GET c
+SUB b
+ADD d
+JPOS 46
+# if true
+# x := y;
+RST b
+INC b
+RST c
+INC c
+SHL c
+SHL c
+INC c
+GET c
+STORE b
+# endif
+# if
+RST b
+INC b
+SHL b
+LOAD b
+PUT b
+RST c
+GET b
+SUB c
+JPOS 57
+INC a
+JUMP 58
+RST a
+JPOS 75
+# if true
+# x := y;
+RST b
+INC b
+RST c
+INC c
+LOAD c
+PUT c
+RST d
+INC d
+SHL d
+SHL d
+INC d
+GET c
+ADD d
+PUT c
+GET c
+STORE b
+# endif
+# x := y;
+RST b
+INC b
+SHL b
+RST c
+INC c
+SHL c
+LOAD c
+PUT c
+RST d
+INC d
+GET c
+ADD d
+PUT c
+GET c
+STORE b
+JUMP 7
+# endwhile
+# x := y;
+RST b
+LOAD b
+PUT b
+RST c
+INC c
+LOAD c
+PUT c
+GET c
+STORE b
+RST b
+INC b
+SHL b
+INC b
+LOAD b
+JUMPR a
+# main
+# call proc0_
+RST a
+INC a
+SHL a
+SHL a
+RST b
+STORE b
+RST b
+INC b
+SHL b
+INC b
+RST c
+INC c
+SHL c
+SHL c
+STRK a
+ADD c
+STORE b
+JUMP 1
+# end of call
+# write x;
+RST b
+INC b
+SHL b
+SHL b
+LOAD b
+PUT b
+GET b
+WRITE
+HALT

@@ -26,7 +26,7 @@ IN
     WHILE j>0 DO
       k:=j-1;
       IF t[k]>x THEN
-        tab[j]:=tab[k];
+        t[j]:=t[k];   # Trzeba było zmienić tab na t żeby się skompilowało
         j:=j-1;
       ELSE
         k:=j;
