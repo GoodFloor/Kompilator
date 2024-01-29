@@ -15,6 +15,7 @@
     void freeRegister(std::string rx);
     void printCmd(std::string cmd);
     unsigned long long getAddress(std::string var);
+    int getNumberOfArguments(std::string procedureName);
 
     int currentProcedureId = 0;
     unsigned long long currentVarAddress = 0;
@@ -22,8 +23,8 @@
     std::map<std::string, unsigned long long> variableMap;
     std::map<std::string, bool> isArgument;
     std::map<std::string, std::string> procedureAlias;
-    std::map<std::string, int> procedureAddress;
     std::map<std::string, std::string> argsAlias;
+    std::map<std::string, int> numberOfArguments;
     bool availableRegister[8];
     std::stack<std::string> lastUsedRegister;
     int argId = 0;
@@ -31,6 +32,8 @@
     int jumpId = 0;
     std::string addressPrefix = "@addr";
     std::string endResult = "";
+
+    // Zmienne do sprawdzania poprawności
 %}
 
 %define api.value.type {std::string}
@@ -261,6 +264,7 @@ command:
 proc_head:
     pidentifier LPAR args_decl RPAR {
         procedureAlias[$1] = varPrefix;
+        numberOfArguments[varPrefix] = argId;
         argId = 0;
         $$ = $1;
     }
@@ -269,7 +273,6 @@ proc_head:
 proc_call:
     pidentifier LPAR args RPAR {
         std::string procId = procedureAlias[$1];
-        int procAddr = procedureAddress[procId];
         unsigned long long returnAddr = getAddress(procId + "@return");
         std::string r1 = takeFirstAvailableRegisterNotA();  
         std::string r2 = takeFirstAvailableRegisterNotA();
@@ -277,6 +280,11 @@ proc_call:
         $$ = "# call " + procId + "\n";
 
         // Dla każdego argumentu w wywołaniu funkcji
+        if(argsVector.size() != getNumberOfArguments(procId))
+        {
+            std::cerr << "Niepoprawna liczba argumentów w wywołaniu funkcji w linii " << yylineno << std::endl;
+            throw "NumberOfArgumentsError";
+        }
         for(int j = 0; j < argsVector.size(); j++)
         {
             std::string targetName = procId + "arg" + std::to_string(j);
@@ -845,13 +853,23 @@ unsigned long long getAddress(std::string var)
     {
         return it->second;
     }
-    std::cout << "Próba dostępu do niezadeklarowanej zmiennej \"" << var << "\" w linii " << yylineno << std::endl;
+    std::cerr << "Próba dostępu do niezadeklarowanej zmiennej \"" << var << "\" w linii " << yylineno << std::endl;
     throw "VariableError";
+}
+
+int getNumberOfArguments(std::string procedureName)
+{
+    std::map<std::string, int>::iterator it;
+    it = numberOfArguments.find(procedureName);
+    if(it != numberOfArguments.end())
+        return it->second;
+    std::cerr << "Próba wywołania niezadeklarowanej procedury \"" << procedureName << "\" w linii " << yylineno << std::endl;
+    throw "ProcedureError";
 }
 
 int yyerror(char const* s)
 {
-    std::cout << "Error: " << s << " at line " << yylineno << std::endl;	
+    std::cerr << "Error: " << s << " at line " << yylineno << std::endl;	
     return 0;
 }
 
@@ -864,7 +882,7 @@ int main(int argc, char const *argv[])
         return 44;
     }
 
-    // Otworzenie pliku wejściowego i wyjściowego
+    // Otworzenie pliku wejściowego
     yyin = fopen(argv[1], "r");
 
     for(int i = 0; i < 8; i++)
@@ -875,11 +893,5 @@ int main(int argc, char const *argv[])
     yyparse();
 
     printCmd(endResult, argv[2]);
-
-    std::map<std::string, unsigned long long>::iterator it = variableMap.begin();
-    while(it != variableMap.end()) {
-        std::cout << "map[" << it->first << "] = " << it->second << std::endl;
-        ++it;
-    }
     return 0;
 }
