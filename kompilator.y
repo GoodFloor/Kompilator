@@ -16,15 +16,23 @@
     void printCmd(std::string cmd);
     unsigned long long getAddress(std::string var);
     int getNumberOfArguments(std::string procedureName);
+    std::string getProcedureAlias(std::string procedureName);
+    void allocateVariable(std::string name);
+    void allocateVariable(std::string name, unsigned long long size);
+    void allocateArgument(std::string name);
+    void allocateArgument(std::string name, unsigned long long size);
 
     int currentProcedureId = 0;
     unsigned long long currentVarAddress = 0;
     std::string varPrefix = "proc" + std::to_string(currentProcedureId) + "_";
     std::map<std::string, unsigned long long> variableMap;
     std::map<std::string, bool> isArgument;
+    std::map<std::string, bool> isArray;
     std::map<std::string, std::string> procedureAlias;
     std::map<std::string, std::string> argsAlias;
     std::map<std::string, int> numberOfArguments;
+    std::map<std::string, bool> isInitialized;
+    std::map<std::string, std::string> registerContent;
     bool availableRegister[8];
     std::stack<std::string> lastUsedRegister;
     int argId = 0;
@@ -168,15 +176,18 @@ command:
     identifier COLON EQUAL expression SEMICOLON {
         std::string r4 = lastUsedRegister.top();
         lastUsedRegister.pop();
-        freeRegister(r4);
         std::string r1 = lastUsedRegister.top();
         lastUsedRegister.pop();
-        freeRegister(r1);
+
+        isInitialized[registerContent[r1]] = true;
 
         $$ = "# x := y;\n";
         $$ += $1 + $4;
         $$ += "GET " + r4 + "\n";
         $$ += "STORE " + r1 + "\n";
+
+        freeRegister(r4);
+        freeRegister(r1);
     }
     | IF condition THEN commands ELSE commands ENDIF {
         std::string addr1 = addressPrefix + std::to_string(jumpId);
@@ -240,6 +251,8 @@ command:
     | READ identifier SEMICOLON {
         std::string r = lastUsedRegister.top();
 
+        isInitialized[registerContent[r]] = true;
+
         $$ = "# read x;\n";
         $$ += $2;
         $$ += "READ\n";
@@ -263,6 +276,13 @@ command:
 
 proc_head:
     pidentifier LPAR args_decl RPAR {
+        std::map<std::string, std::string>::iterator it;
+        it = procedureAlias.find($1);
+        if(it != procedureAlias.end())
+        {
+            std::cerr << "BŁĄD: \n\tRedeklaracja procedury " << $1 << " w linii " << yylineno << std::endl;
+            throw "ProcedureRedeclarationError";
+        }
         procedureAlias[$1] = varPrefix;
         numberOfArguments[varPrefix] = argId;
         argId = 0;
@@ -272,7 +292,17 @@ proc_head:
 
 proc_call:
     pidentifier LPAR args RPAR {
-        std::string procId = procedureAlias[$1];
+        std::string procId = getProcedureAlias($1);
+        if(procId == varPrefix)
+        {
+            std::cerr << "BŁĄD: \n\tNiewłaściwe użycie procedury " << $1 << " w linii " << yylineno << std::endl;
+            throw "ProcedureError";
+        }
+        if(argsVector.size() != getNumberOfArguments(procId))
+        {
+            std::cerr << "BŁĄD: \n\tNiepoprawna liczba argumentów w wywołaniu funkcji " << $1 << " w linii " << yylineno << std::endl;
+            throw "NumberOfArgumentsError";
+        }
         unsigned long long returnAddr = getAddress(procId + "@return");
         std::string r1 = takeFirstAvailableRegisterNotA();  
         std::string r2 = takeFirstAvailableRegisterNotA();
@@ -280,11 +310,6 @@ proc_call:
         $$ = "# call " + procId + "\n";
 
         // Dla każdego argumentu w wywołaniu funkcji
-        if(argsVector.size() != getNumberOfArguments(procId))
-        {
-            std::cerr << "Niepoprawna liczba argumentów w wywołaniu funkcji w linii " << yylineno << std::endl;
-            throw "NumberOfArgumentsError";
-        }
         for(int j = 0; j < argsVector.size(); j++)
         {
             std::string targetName = procId + "arg" + std::to_string(j);
@@ -293,6 +318,12 @@ proc_call:
 
             unsigned long long sourceAddr = getAddress(sourceName);
             unsigned long long targetAddr = getAddress(targetName);
+
+            if(isArray[sourceName] != isArray[targetName])
+            {
+                std::cerr << "BŁĄD: \n\tNiepoprawny typ argumentu w wywołaniu procedury w linii " << yylineno << std::endl;
+                throw "ArgumentError";
+            }
 
             $$ += insertingNumber("a", sourceAddr);
             if (isArgument[sourceName])
@@ -321,70 +352,44 @@ proc_call:
 
 declarations:
     declarations COMMA pidentifier {
-        variableMap[varPrefix + $3] = currentVarAddress;
-        isArgument[varPrefix + $3] = false;
-        currentVarAddress++;
+        allocateVariable($3);
     }
     | declarations COMMA pidentifier LSPAR num RSPAR {
-        variableMap[varPrefix + $3] = currentVarAddress;
-        isArgument[varPrefix + $3] = false;
-        currentVarAddress += stoull($5);
+        allocateVariable($3, stoull($5));
     }
     | pidentifier {
-        variableMap[varPrefix + $1] = currentVarAddress;
-        isArgument[varPrefix + $1] = false;
-        currentVarAddress++;
+        allocateVariable($1);
     }
     | pidentifier LSPAR num RSPAR {
-        variableMap[varPrefix + $1] = currentVarAddress;
-        isArgument[varPrefix + $1] = false;
-        currentVarAddress += stoull($3);
+        allocateVariable($1, stoull($3));
     }
 ;
 
 args_decl:
     args_decl COMMA pidentifier {
-        variableMap[varPrefix + $3] = currentVarAddress;
-        isArgument[varPrefix + $3] = true;
-        currentVarAddress++;
-
-        argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $3;
-        argId++;
+        allocateArgument($3);
     }
     | args_decl COMMA T pidentifier {
-        variableMap[varPrefix + $4] = currentVarAddress;
-        isArgument[varPrefix + $4] = true;
-        currentVarAddress++;
-
-        argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $4;
-        argId++;
+        allocateArgument($4, 1);
     }
     | pidentifier {
-        variableMap[varPrefix + $1] = currentVarAddress;
-        isArgument[varPrefix + $1] = true;
-        currentVarAddress++;
-
-        argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $1;
-        argId++;
+        allocateArgument($1);
     }
     | T pidentifier {
-        variableMap[varPrefix + $2] = currentVarAddress;
-        isArgument[varPrefix + $2] = true;
-        currentVarAddress++;
-
-        argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + $2;
-        argId++;
+        allocateArgument($2, 1);
     }
 ;
 
 args:
     args COMMA pidentifier {
         argsVector.push_back(varPrefix + $3);
+        isInitialized[varPrefix + $3] = true;
         // std::cout << argId << $3 << std::endl;
         // argId++;
     }
     | pidentifier {
         argsVector.push_back(varPrefix + $1);
+        isInitialized[varPrefix + $1] = true;
         // std::cout << argId << $1 << std::endl;
         // argId++;
     }
@@ -766,6 +771,11 @@ identifier:
         std::string r = takeFirstAvailableRegisterNotA();  
         std::string varName = varPrefix + $1;
         unsigned long long varAddress = getAddress(varName);
+        if(isArray[varName])
+        {
+            std::cerr << "BŁĄD: \n\tNiewłaściwe użycie tablicy w linii " << yylineno << std::endl;
+            throw "ArrayError";
+        }
 
         $$ = insertingNumber(r, varAddress);
 
@@ -776,12 +786,19 @@ identifier:
         }
 
         lastUsedRegister.push(r);
+        registerContent[r] = varPrefix + $1;
         }
     | pidentifier LSPAR num RSPAR { 
         std::string r = takeFirstAvailableRegisterNotA();
         std::string varName = varPrefix + $1;
         unsigned long long varAddress = getAddress(varName);
         unsigned long long offset = stoull($3);
+
+        if(!isArray[varName])
+        {
+            std::cerr << "BŁĄD: \n\tNiewłaściwe użycie zmiennej niebędącej tablicą w linii " << yylineno << std::endl;
+            throw "ArrayError";
+        }
 
         if (isArgument[varName])
         {
@@ -798,6 +815,7 @@ identifier:
         }
 
         lastUsedRegister.push(r);
+        registerContent[r] = varPrefix + $1;
         }
     | pidentifier LSPAR pidentifier RSPAR  { 
         std::string r = takeFirstAvailableRegisterNotA();  
@@ -805,6 +823,17 @@ identifier:
         std::string offsetName = varPrefix + $3;
         unsigned long long tabAddress = getAddress(tabName);
         unsigned long long offsetAddress = getAddress(offsetName);
+
+        if(!isArray[tabName])
+        {
+            std::cerr << "BŁĄD: \n\tNiewłaściwe użycie zmiennej niebędącej tablicą w linii " << yylineno << std::endl;
+            throw "ArrayError";
+        }
+        if(isArray[offsetName])
+        {
+            std::cerr << "BŁĄD: \n\tNiewłaściwe użycie tablicy w linii " << yylineno << std::endl;
+            throw "ArrayError";
+        }
 
         $$ = insertingNumber(r, tabAddress);
         if (isArgument[tabName])
@@ -822,6 +851,7 @@ identifier:
         $$ += "PUT " + r + "\n";
 
         lastUsedRegister.push(r);
+        registerContent[r] = varPrefix + $1;
         }
 ;
 %%
@@ -853,7 +883,7 @@ unsigned long long getAddress(std::string var)
     {
         return it->second;
     }
-    std::cerr << "Próba dostępu do niezadeklarowanej zmiennej \"" << var << "\" w linii " << yylineno << std::endl;
+    std::cerr << "BŁĄD: \n\tPróba dostępu do niezadeklarowanej zmiennej \"" << var << "\" w linii " << yylineno << std::endl;
     throw "VariableError";
 }
 
@@ -863,8 +893,56 @@ int getNumberOfArguments(std::string procedureName)
     it = numberOfArguments.find(procedureName);
     if(it != numberOfArguments.end())
         return it->second;
-    std::cerr << "Próba wywołania niezadeklarowanej procedury \"" << procedureName << "\" w linii " << yylineno << std::endl;
+    std::cerr << "BŁĄD: \n\tPróba wywołania niezadeklarowanej procedury \"" << procedureName << "\" w linii " << yylineno << std::endl;
     throw "ProcedureError";
+}
+
+std::string getProcedureAlias(std::string procedureName)
+{
+    std::map<std::string, std::string>::iterator it;
+    it = procedureAlias.find(procedureName);
+    if(it != procedureAlias.end())
+        return it->second;
+    std::cerr << "BŁĄD: \n\tPróba wywołania niezadeklarowanej procedury \"" << procedureName << "\" w linii " << yylineno << std::endl;
+    throw "ProcedureError";
+}
+
+void allocateVariable(std::string name, unsigned long long size)
+{
+    std::map<std::string, unsigned long long>::iterator it;
+    it = variableMap.find(varPrefix + name);
+    if(it == variableMap.end())
+    {
+        variableMap[varPrefix + name] = currentVarAddress;
+        isArgument[varPrefix + name] = false;
+        isArray[varPrefix + name] = true;
+        isInitialized[varPrefix + name] = false;
+        currentVarAddress += size;
+        return;
+    }
+    std::cerr << "BŁĄD: \n\tRedeklaracja zmiennej \"" << name << "\" w linii " << yylineno - 1 << std::endl;
+    throw "VariableError";
+}
+
+void allocateArgument(std::string name, unsigned long long size)
+{
+    allocateVariable(name, size);
+    isArgument[varPrefix + name] = true;
+    argsAlias[varPrefix + "arg" + std::to_string(argId)] = varPrefix + name;
+    isInitialized[varPrefix + name] = true;
+    argId++;
+}
+
+void allocateVariable(std::string name)
+{
+    allocateVariable(name, 1);
+    isArray[varPrefix + name] = false;
+}
+
+void allocateArgument(std::string name)
+{
+    allocateArgument(name, 1);
+    isArray[varPrefix + name] = false;
 }
 
 int yyerror(char const* s)
